@@ -12,6 +12,7 @@
 #include "consult_recordview.h"
 #include "medicineview.h"
 #include "prescriptionview.h"
+#include "doctoreditview.h"  // 确保包含这个头文件
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -39,6 +40,7 @@ public slots:
     void gomedicineview();
     void goconsult_recordview();
     void goappointmentview();
+    void goDoctorEditView(int rowNo);  // 添加医生编辑视图槽函数
 
 private slots:
     void on_stackedWidget_currentChanged(int arg1);
@@ -62,6 +64,7 @@ private:
     consult_recordview *consult_recordView;
     medicineview *medicineView;
     Prescriptionview *prescriptionView;
-
+    DoctoreditView *doctorEditView;  // 添加医生编辑视图指针
 };
+
 #endif // MASTRVIEW_H
