@@ -52,6 +52,23 @@ public:
     QStringList getDoctorTitles();           // 获取职称列表
     QStringList getDoctorStatuses();         // 获取状态列表
 
+
+    // 科室管理方法（新增）
+    bool initDepartmentModel();
+    int addNewDepartment();
+    bool searchDepartment(const QString &filter);
+    bool deleteCurrentDepartment();
+    bool submitDepartmentEdit();
+    void revertDepartmentEdit();
+
+    // 获取科室状态列表
+    QStringList getDepartmentStatuses();
+
+    // 获取模型指针
+    QSqlTableModel *departmentTabModel;
+    QItemSelectionModel *theDepartmentSelection;
+
+
     QSqlTableModel *patientTabModel;
     QItemSelectionModel *thePatientSelection;
 

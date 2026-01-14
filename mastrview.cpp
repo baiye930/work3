@@ -1,7 +1,11 @@
+// mastrview.cpp - 添加科室编辑视图实现
 #include "mastrview.h"
 #include "ui_mastrview.h"
 #include <QDebug>
 #include "idatabase.h"
+
+// 需要包含科室编辑视图头文件
+#include "departmenteditview.h"
 
 MastrView::MastrView(QWidget *parent)
     : QWidget(parent)
@@ -16,7 +20,8 @@ MastrView::MastrView(QWidget *parent)
     , consult_recordView(nullptr)
     , medicineView(nullptr)
     , prescriptionView(nullptr)
-    , doctorEditView(nullptr)  // 初始化指针
+    , doctorEditView(nullptr)
+    , departmentEditView(nullptr)  // 初始化科室编辑视图指针
 {
     ui->setupUi(this);
 
@@ -71,6 +76,9 @@ void MastrView::goDepartmentView()
     qDebug() << "goDepartmentView";
     departmentView = new DepartmentView();
     pushWidgetToStackView(departmentView);
+
+    // 连接信号，跳转到科室编辑视图
+    connect(departmentView, SIGNAL(goDepartmentEditView(int)), this, SLOT(goDepartmentEditView(int)));
 }
 
 void MastrView::goPatientEditView(int rowNo)
@@ -133,7 +141,6 @@ void MastrView::goappointmentview()
     pushWidgetToStackView(appointmentView);
 }
 
-// 新增：跳转到医生编辑视图
 void MastrView::goDoctorEditView(int rowNo)
 {
     qDebug() << "goDoctorEditView, row:" << rowNo;
@@ -141,6 +148,16 @@ void MastrView::goDoctorEditView(int rowNo)
     pushWidgetToStackView(doctorEditView);
 
     connect(doctorEditView, SIGNAL(goPreviousView()), this, SLOT(goPreviousView()));
+}
+
+// 新增：跳转到科室编辑视图
+void MastrView::goDepartmentEditView(int rowNo)
+{
+    qDebug() << "goDepartmentEditView, row:" << rowNo;
+    departmentEditView = new DepartmentEditView(this, rowNo);
+    pushWidgetToStackView(departmentEditView);
+
+    connect(departmentEditView, SIGNAL(goPreviousView()), this, SLOT(goPreviousView()));
 }
 
 void MastrView::pushWidgetToStackView(QWidget *widget)
@@ -158,6 +175,8 @@ void MastrView::on_btBack_clicked()
 
 void MastrView::on_stackedWidget_currentChanged(int arg1)
 {
+    Q_UNUSED(arg1);
+
     int count = ui->stackedWidget->count();
     if (count > 1)
         ui->btBack->setEnabled(true);

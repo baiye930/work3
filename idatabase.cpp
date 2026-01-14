@@ -273,3 +273,139 @@ QStringList IDatabase::getDoctorStatuses()
 {
     return QStringList() << "active" << "leave" << "retired";
 }
+
+// 科室管理方法实现
+bool IDatabase::initDepartmentModel()
+{
+    departmentTabModel = new QSqlTableModel(this, database);
+    departmentTabModel->setTable("department");
+    departmentTabModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
+
+    // 设置表头显示名称
+    departmentTabModel->setHeaderData(departmentTabModel->fieldIndex("name"), Qt::Horizontal, "科室名称");
+    departmentTabModel->setHeaderData(departmentTabModel->fieldIndex("location"), Qt::Horizontal, "位置/楼层");
+    departmentTabModel->setHeaderData(departmentTabModel->fieldIndex("phone"), Qt::Horizontal, "科室电话");
+    departmentTabModel->setHeaderData(departmentTabModel->fieldIndex("description"), Qt::Horizontal, "描述");
+    departmentTabModel->setHeaderData(departmentTabModel->fieldIndex("director_id"), Qt::Horizontal, "科室主任");
+    departmentTabModel->setHeaderData(departmentTabModel->fieldIndex("established_date"), Qt::Horizontal, "成立日期");
+    departmentTabModel->setHeaderData(departmentTabModel->fieldIndex("bed_count"), Qt::Horizontal, "床位数量");
+    departmentTabModel->setHeaderData(departmentTabModel->fieldIndex("status"), Qt::Horizontal, "状态");
+
+    // 按科室名称排序
+    departmentTabModel->setSort(departmentTabModel->fieldIndex("name"), Qt::AscendingOrder);
+
+    if (!departmentTabModel->select()) {
+        qDebug() << "初始化科室模型失败：" << departmentTabModel->lastError();
+        return false;
+    }
+
+    theDepartmentSelection = new QItemSelectionModel(departmentTabModel);
+    qDebug() << "科室模型初始化成功，记录数：" << departmentTabModel->rowCount();
+    return true;
+}
+
+int IDatabase::addNewDepartment()
+{
+    departmentTabModel->insertRow(departmentTabModel->rowCount(), QModelIndex());
+
+    QModelIndex curIndex = departmentTabModel->index(departmentTabModel->rowCount() - 1, 0);
+    int curRecNo = curIndex.row();
+    QSqlRecord curRec = departmentTabModel->record(curRecNo);
+
+    // 设置默认值
+    curRec.setValue("id", QUuid::createUuid().toString(QUuid::WithoutBraces));
+    curRec.setValue("created_time", QDateTime::currentDateTime());
+    curRec.setValue("status", "active");
+    curRec.setValue("bed_count", 0);
+    curRec.setValue("established_date", QDate::currentDate());
+
+    departmentTabModel->setRecord(curRecNo, curRec);
+
+    qDebug() << "新增科室，ID：" << curRec.value("id").toString();
+    return curRecNo;
+}
+
+bool IDatabase::searchDepartment(const QString &filter)
+{
+    if (filter.isEmpty()) {
+        departmentTabModel->setFilter("");
+    } else {
+        QString whereClause = QString("name LIKE '%%1%' OR location LIKE '%%1%' OR phone LIKE '%%1%'")
+        .arg(filter);
+        departmentTabModel->setFilter(whereClause);
+    }
+
+    bool success = departmentTabModel->select();
+    if (!success) {
+        qDebug() << "搜索科室失败：" << departmentTabModel->lastError();
+    }
+    return success;
+}
+
+bool IDatabase::deleteCurrentDepartment()
+{
+    QModelIndex curIndex = theDepartmentSelection->currentIndex();
+    if (!curIndex.isValid()) {
+        qDebug() << "删除失败：未选择科室";
+        return false;
+    }
+
+    // 获取科室信息
+    QString departmentId = departmentTabModel->record(curIndex.row()).value("id").toString();
+    QString departmentName = departmentTabModel->record(curIndex.row()).value("name").toString();
+
+    // 检查该科室是否有医生
+    QSqlQuery query;
+    query.prepare("SELECT COUNT(*) FROM doctor WHERE department_id = ? AND status = 'active'");
+    query.addBindValue(departmentId);
+    query.exec();
+
+    if (query.next() && query.value(0).toInt() > 0) {
+        qDebug() << "无法删除科室：" << departmentName << "，该科室下有在职医生";
+        return false;
+    }
+
+    // 检查该科室是否有预约
+    query.prepare("SELECT COUNT(*) FROM appointment WHERE department_id = ? AND status IN ('scheduled', 'confirmed')");
+    query.addBindValue(departmentId);
+    query.exec();
+
+    if (query.next() && query.value(0).toInt() > 0) {
+        qDebug() << "无法删除科室：" << departmentName << "，该科室下有未完成的预约";
+        return false;
+    }
+
+    // 执行删除
+    if (departmentTabModel->removeRow(curIndex.row())) {
+        bool success = departmentTabModel->submitAll();
+        if (success) {
+            departmentTabModel->select(); // 刷新数据
+            qDebug() << "删除科室成功：" << departmentName;
+        } else {
+            qDebug() << "删除科室失败：" << departmentTabModel->lastError();
+        }
+        return success;
+    }
+
+    return false;
+}
+
+bool IDatabase::submitDepartmentEdit()
+{
+    bool success = departmentTabModel->submitAll();
+    if (!success) {
+        qDebug() << "提交科室编辑失败：" << departmentTabModel->lastError();
+    }
+    return success;
+}
+
+void IDatabase::revertDepartmentEdit()
+{
+    departmentTabModel->revertAll();
+    qDebug() << "撤销科室编辑";
+}
+
+QStringList IDatabase::getDepartmentStatuses()
+{
+    return QStringList() << "active" << "inactive" << "under_construction";
+}
