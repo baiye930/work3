@@ -20,10 +20,12 @@ SOURCES += \
     loginview.cpp \
     main.cpp \
     mastrview.cpp \
+    medicineeditview.cpp \
     medicineview.cpp \
     patienteditview.cpp \
     patientview.cpp \
     prescriptionview.cpp \
+    stockdialog.cpp \
     welcomview.cpp
 
 HEADERS += \
@@ -36,10 +38,12 @@ HEADERS += \
     idatabase.h \
     loginview.h \
     mastrview.h \
+    medicineeditview.h \
     medicineview.h \
     patienteditview.h \
     patientview.h \
     prescriptionview.h \
+    stockdialog.h \
     welcomview.h
 
 FORMS += \
@@ -51,10 +55,12 @@ FORMS += \
     doctorview.ui \
     loginview.ui \
     mastrview.ui \
+    medicineeditview.ui \
     medicineview.ui \
     patienteditview.ui \
     patientview.ui \
     prescriptionview.ui \
+    stockdialog.ui \
     welcomview.ui
 
 # Default rules for deployment.

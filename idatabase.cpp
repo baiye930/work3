@@ -409,3 +409,392 @@ QStringList IDatabase::getDepartmentStatuses()
 {
     return QStringList() << "active" << "inactive" << "under_construction";
 }
+
+// 药品管理方法实现
+bool IDatabase::initMedicineModel()
+{
+    medicineTabModel = new QSqlTableModel(this, database);
+    medicineTabModel->setTable("medicine");
+    medicineTabModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
+
+    // 设置表头显示名称
+    medicineTabModel->setHeaderData(medicineTabModel->fieldIndex("code"), Qt::Horizontal, "药品编码");
+    medicineTabModel->setHeaderData(medicineTabModel->fieldIndex("name"), Qt::Horizontal, "药品名称");
+    medicineTabModel->setHeaderData(medicineTabModel->fieldIndex("generic_name"), Qt::Horizontal, "通用名");
+    medicineTabModel->setHeaderData(medicineTabModel->fieldIndex("category"), Qt::Horizontal, "分类");
+    medicineTabModel->setHeaderData(medicineTabModel->fieldIndex("specification"), Qt::Horizontal, "规格");
+    medicineTabModel->setHeaderData(medicineTabModel->fieldIndex("unit"), Qt::Horizontal, "单位");
+    medicineTabModel->setHeaderData(medicineTabModel->fieldIndex("manufacturer"), Qt::Horizontal, "生产厂家");
+    medicineTabModel->setHeaderData(medicineTabModel->fieldIndex("price"), Qt::Horizontal, "单价");
+    medicineTabModel->setHeaderData(medicineTabModel->fieldIndex("stock"), Qt::Horizontal, "库存");
+    medicineTabModel->setHeaderData(medicineTabModel->fieldIndex("min_stock"), Qt::Horizontal, "最小库存");
+    medicineTabModel->setHeaderData(medicineTabModel->fieldIndex("expiry_date"), Qt::Horizontal, "过期日期");
+    medicineTabModel->setHeaderData(medicineTabModel->fieldIndex("status"), Qt::Horizontal, "状态");
+
+    // 按药品名称排序
+    medicineTabModel->setSort(medicineTabModel->fieldIndex("name"), Qt::AscendingOrder);
+
+    if (!medicineTabModel->select()) {
+        qDebug() << "初始化药品模型失败：" << medicineTabModel->lastError();
+        return false;
+    }
+
+    theMedicineSelection = new QItemSelectionModel(medicineTabModel);
+    qDebug() << "药品模型初始化成功，记录数：" << medicineTabModel->rowCount();
+    return true;
+}
+
+int IDatabase::addNewMedicine()
+{
+    medicineTabModel->insertRow(medicineTabModel->rowCount(), QModelIndex());
+
+    QModelIndex curIndex = medicineTabModel->index(medicineTabModel->rowCount() - 1, 0);
+    int curRecNo = curIndex.row();
+    QSqlRecord curRec = medicineTabModel->record(curRecNo);
+
+    // 生成药品编码（规则：MED + 年月日 + 4位随机数）
+    QString dateStr = QDate::currentDate().toString("yyyyMMdd");
+    QString randomStr = QString::number(QRandomGenerator::global()->bounded(1000, 9999));
+    QString medicineCode = "MED" + dateStr + randomStr;
+
+    // 设置默认值
+    curRec.setValue("id", QUuid::createUuid().toString(QUuid::WithoutBraces));
+    curRec.setValue("code", medicineCode);
+    curRec.setValue("created_time", QDateTime::currentDateTime());
+    curRec.setValue("status", "active");
+    curRec.setValue("category", "西药");
+    curRec.setValue("unit", "盒");
+    curRec.setValue("dosage_form", "片剂");
+    curRec.setValue("price", 0.0);
+    curRec.setValue("cost", 0.0);
+    curRec.setValue("stock", 0);
+    curRec.setValue("min_stock", 10);
+    curRec.setValue("max_stock", 1000);
+    curRec.setValue("expiration_days", 365 * 2); // 默认有效期2年
+
+    medicineTabModel->setRecord(curRecNo, curRec);
+
+    qDebug() << "新增药品，ID：" << curRec.value("id").toString()
+             << "，编码：" << curRec.value("code").toString();
+    return curRecNo;
+}
+
+bool IDatabase::searchMedicine(const QString &filter)
+{
+    if (filter.isEmpty()) {
+        medicineTabModel->setFilter("");
+    } else {
+        QString whereClause = QString("name LIKE '%%1%' OR code LIKE '%%1%' OR manufacturer LIKE '%%1%' OR generic_name LIKE '%%1%'")
+        .arg(filter);
+        medicineTabModel->setFilter(whereClause);
+    }
+
+    bool success = medicineTabModel->select();
+    if (!success) {
+        qDebug() << "搜索药品失败：" << medicineTabModel->lastError();
+    }
+    return success;
+}
+
+bool IDatabase::deleteCurrentMedicine()
+{
+    QModelIndex curIndex = theMedicineSelection->currentIndex();
+    if (!curIndex.isValid()) {
+        qDebug() << "删除失败：未选择药品";
+        return false;
+    }
+
+    // 获取药品信息
+    QString medicineId = medicineTabModel->record(curIndex.row()).value("id").toString();
+    QString medicineName = medicineTabModel->record(curIndex.row()).value("name").toString();
+
+    // 检查该药品是否有库存
+    int stock = medicineTabModel->record(curIndex.row()).value("stock").toInt();
+    if (stock > 0) {
+        qDebug() << "无法删除药品：" << medicineName << "，库存不为零";
+        return false;
+    }
+
+    // 检查该药品是否有处方使用记录
+    QSqlQuery query;
+    query.prepare("SELECT COUNT(*) FROM prescription_detail WHERE medicine_id = ?");
+    query.addBindValue(medicineId);
+    query.exec();
+
+    if (query.next() && query.value(0).toInt() > 0) {
+        qDebug() << "无法删除药品：" << medicineName << "，该药品有处方使用记录";
+        return false;
+    }
+
+    // 执行删除
+    if (medicineTabModel->removeRow(curIndex.row())) {
+        bool success = medicineTabModel->submitAll();
+        if (success) {
+            medicineTabModel->select(); // 刷新数据
+            qDebug() << "删除药品成功：" << medicineName;
+        } else {
+            qDebug() << "删除药品失败：" << medicineTabModel->lastError();
+        }
+        return success;
+    }
+
+    return false;
+}
+
+bool IDatabase::submitMedicineEdit()
+{
+    bool success = medicineTabModel->submitAll();
+    if (!success) {
+        qDebug() << "提交药品编辑失败：" << medicineTabModel->lastError();
+    }
+    return success;
+}
+
+void IDatabase::revertMedicineEdit()
+{
+    medicineTabModel->revertAll();
+    qDebug() << "撤销药品编辑";
+}
+
+bool IDatabase::stockIn(const QString &medicineId, int quantity, const QString &batchNumber, const QDate &expiryDate)
+{
+    if (quantity <= 0) {
+        qDebug() << "入库数量必须大于0";
+        return false;
+    }
+
+    QSqlQuery query;
+    query.prepare("SELECT stock, name FROM medicine WHERE id = ?");
+    query.addBindValue(medicineId);
+
+    if (!query.exec() || !query.next()) {
+        qDebug() << "获取药品信息失败";
+        return false;
+    }
+
+    int oldStock = query.value("stock").toInt();
+    QString medicineName = query.value("name").toString();
+    int newStock = oldStock + quantity;
+
+    // 更新库存
+    query.prepare("UPDATE medicine SET stock = ? WHERE id = ?");
+    query.addBindValue(newStock);
+    query.addBindValue(medicineId);
+
+    if (!query.exec()) {
+        qDebug() << "更新库存失败：" << query.lastError();
+        return false;
+    }
+
+    // 记录库存变更
+    QString recordId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    query.prepare("INSERT INTO inventory_record (id, medicine_id, transaction_type, quantity_change, before_quantity, after_quantity, reference_id, reference_type, operator, transaction_time, batch_number, expiry_date) "
+                  "VALUES (?, ?, 'purchase', ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    query.addBindValue(recordId);
+    query.addBindValue(medicineId);
+    query.addBindValue(quantity);
+    query.addBindValue(oldStock);
+    query.addBindValue(newStock);
+    query.addBindValue("");
+    query.addBindValue("manual");
+    query.addBindValue("system");
+    query.addBindValue(QDateTime::currentDateTime());
+    query.addBindValue(batchNumber);
+    query.addBindValue(expiryDate.isValid() ? expiryDate : QDate());
+
+    if (!query.exec()) {
+        qDebug() << "记录库存变更失败：" << query.lastError();
+        return false;
+    }
+
+    qDebug() << "药品入库成功：" << medicineName << "，数量：" << quantity
+             << "，新库存：" << newStock;
+    return true;
+}
+
+bool IDatabase::stockOut(const QString &medicineId, int quantity, const QString &referenceId)
+{
+    if (quantity <= 0) {
+        qDebug() << "出库数量必须大于0";
+        return false;
+    }
+
+    QSqlQuery query;
+    query.prepare("SELECT stock, name FROM medicine WHERE id = ?");
+    query.addBindValue(medicineId);
+
+    if (!query.exec() || !query.next()) {
+        qDebug() << "获取药品信息失败";
+        return false;
+    }
+
+    int oldStock = query.value("stock").toInt();
+    QString medicineName = query.value("name").toString();
+
+    if (oldStock < quantity) {
+        qDebug() << "库存不足：" << medicineName << "，库存：" << oldStock << "，需求：" << quantity;
+        return false;
+    }
+
+    int newStock = oldStock - quantity;
+
+    // 更新库存
+    query.prepare("UPDATE medicine SET stock = ? WHERE id = ?");
+    query.addBindValue(newStock);
+    query.addBindValue(medicineId);
+
+    if (!query.exec()) {
+        qDebug() << "更新库存失败：" << query.lastError();
+        return false;
+    }
+
+    // 记录库存变更
+    QString recordId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    query.prepare("INSERT INTO inventory_record (id, medicine_id, transaction_type, quantity_change, before_quantity, after_quantity, reference_id, reference_type, operator, transaction_time) "
+                  "VALUES (?, ?, 'dispense', ?, ?, ?, ?, ?, ?, ?)");
+    query.addBindValue(recordId);
+    query.addBindValue(medicineId);
+    query.addBindValue(-quantity);
+    query.addBindValue(oldStock);
+    query.addBindValue(newStock);
+    query.addBindValue(referenceId);
+    query.addBindValue("prescription");
+    query.addBindValue("system");
+    query.addBindValue(QDateTime::currentDateTime());
+
+    if (!query.exec()) {
+        qDebug() << "记录库存变更失败：" << query.lastError();
+        return false;
+    }
+
+    qDebug() << "药品出库成功：" << medicineName << "，数量：" << quantity
+             << "，新库存：" << newStock;
+    return true;
+}
+
+bool IDatabase::adjustStock(const QString &medicineId, int newQuantity)
+{
+    if (newQuantity < 0) {
+        qDebug() << "库存数量不能为负数";
+        return false;
+    }
+
+    QSqlQuery query;
+    query.prepare("SELECT stock, name FROM medicine WHERE id = ?");
+    query.addBindValue(medicineId);
+
+    if (!query.exec() || !query.next()) {
+        qDebug() << "获取药品信息失败";
+        return false;
+    }
+
+    int oldStock = query.value("stock").toInt();
+    QString medicineName = query.value("name").toString();
+    int quantityChange = newQuantity - oldStock;
+
+    // 更新库存
+    query.prepare("UPDATE medicine SET stock = ? WHERE id = ?");
+    query.addBindValue(newQuantity);
+    query.addBindValue(medicineId);
+
+    if (!query.exec()) {
+        qDebug() << "更新库存失败：" << query.lastError();
+        return false;
+    }
+
+    // 记录库存调整
+    QString recordId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    query.prepare("INSERT INTO inventory_record (id, medicine_id, transaction_type, quantity_change, before_quantity, after_quantity, reference_id, reference_type, operator, transaction_time, notes) "
+                  "VALUES (?, ?, 'adjust', ?, ?, ?, ?, ?, ?, ?, ?)");
+    query.addBindValue(recordId);
+    query.addBindValue(medicineId);
+    query.addBindValue(quantityChange);
+    query.addBindValue(oldStock);
+    query.addBindValue(newQuantity);
+    query.addBindValue("");
+    query.addBindValue("adjustment");
+    query.addBindValue("system");
+    query.addBindValue(QDateTime::currentDateTime());
+    query.addBindValue("库存调整");
+
+    if (!query.exec()) {
+        qDebug() << "记录库存调整失败：" << query.lastError();
+        return false;
+    }
+
+    qDebug() << "库存调整成功：" << medicineName << "，调整：" << quantityChange
+             << "，新库存：" << newQuantity;
+    return true;
+}
+
+QList<QString> IDatabase::getLowStockMedicines(int threshold)
+{
+    QList<QString> lowStockMedicines;
+    QSqlQuery query;
+    query.prepare("SELECT name, stock, min_stock FROM medicine WHERE stock <= ? AND status = 'active' ORDER BY stock ASC");
+    query.addBindValue(threshold);
+
+    if (query.exec()) {
+        while (query.next()) {
+            QString medicineName = query.value("name").toString();
+            int stock = query.value("stock").toInt();
+            int minStock = query.value("min_stock").toInt();
+            lowStockMedicines.append(QString("%1 (库存:%2, 最低:%3)").arg(medicineName).arg(stock).arg(minStock));
+        }
+    }
+
+    return lowStockMedicines;
+}
+
+QList<QString> IDatabase::getNearExpiryMedicines(int days)
+{
+    QList<QString> nearExpiryMedicines;
+    QDate checkDate = QDate::currentDate().addDays(days);
+
+    QSqlQuery query;
+    query.prepare("SELECT name, expiry_date, stock FROM medicine WHERE expiry_date <= ? AND expiry_date >= ? AND status = 'active' ORDER BY expiry_date ASC");
+    query.addBindValue(checkDate);
+    query.addBindValue(QDate::currentDate());
+
+    if (query.exec()) {
+        while (query.next()) {
+            QString medicineName = query.value("name").toString();
+            QDate expiryDate = query.value("expiry_date").toDate();
+            int stock = query.value("stock").toInt();
+            int daysToExpire = QDate::currentDate().daysTo(expiryDate);
+            nearExpiryMedicines.append(QString("%1 (到期:%2, 剩余:%3天, 库存:%4)")
+                                           .arg(medicineName)
+                                           .arg(expiryDate.toString("yyyy-MM-dd"))
+                                           .arg(daysToExpire)
+                                           .arg(stock));
+        }
+    }
+
+    return nearExpiryMedicines;
+}
+
+double IDatabase::getTotalInventoryValue()
+{
+    double totalValue = 0.0;
+    QSqlQuery query("SELECT SUM(stock * cost) as total FROM medicine WHERE status = 'active'");
+
+    if (query.exec() && query.next()) {
+        totalValue = query.value("total").toDouble();
+    }
+
+    return totalValue;
+}
+
+QStringList IDatabase::getMedicineCategories()
+{
+    // 实际项目中应该从数据库查询，这里返回常见分类
+    return QStringList() << "西药" << "中药" << "中成药" << "处方药" << "非处方药"
+                         << "抗生素" << "激素类" << "心脑血管" << "消化系统" << "呼吸系统";
+}
+
+QStringList IDatabase::getDosageForms()
+{
+    // 常见剂型
+    return QStringList() << "片剂" << "胶囊" << "注射剂" << "颗粒剂" << "口服液"
+                         << "软膏" << "栓剂" << "滴眼液" << "喷雾剂" << "贴剂";
+}

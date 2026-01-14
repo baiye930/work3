@@ -3,7 +3,7 @@
 #include "ui_mastrview.h"
 #include <QDebug>
 #include "idatabase.h"
-
+#include "medicineeditview.h"
 // 需要包含科室编辑视图头文件
 #include "departmenteditview.h"
 
@@ -21,7 +21,8 @@ MastrView::MastrView(QWidget *parent)
     , medicineView(nullptr)
     , prescriptionView(nullptr)
     , doctorEditView(nullptr)
-    , departmentEditView(nullptr)  // 初始化科室编辑视图指针
+    , departmentEditView(nullptr)
+    , medicineEditView(nullptr)  // 初始化药品编辑视图指针
 {
     ui->setupUi(this);
 
@@ -120,12 +121,7 @@ void MastrView::goPrescriptionview()
     pushWidgetToStackView(prescriptionView);
 }
 
-void MastrView::gomedicineview()
-{
-    qDebug() << "gomedicineview";
-    medicineView = new medicineview(this);
-    pushWidgetToStackView(medicineView);
-}
+
 
 void MastrView::goconsult_recordview()
 {
@@ -160,13 +156,7 @@ void MastrView::goDepartmentEditView(int rowNo)
     connect(departmentEditView, SIGNAL(goPreviousView()), this, SLOT(goPreviousView()));
 }
 
-void MastrView::pushWidgetToStackView(QWidget *widget)
-{
-    ui->stackedWidget->addWidget(widget);
-    int count = ui->stackedWidget->count();
-    ui->stackedWidget->setCurrentIndex(count - 1);
-    ui->labelTitle->setText(widget->windowTitle());
-}
+
 
 void MastrView::on_btBack_clicked()
 {
@@ -196,4 +186,30 @@ void MastrView::on_stackedWidget_currentChanged(int arg1)
 void MastrView::on_btLogout_clicked()
 {
     goPreviousView();
+}
+void MastrView::gomedicineview()
+{
+    qDebug() << "gomedicineview";
+    medicineView = new medicineview(this);
+    pushWidgetToStackView(medicineView);
+
+    // 连接信号，跳转到药品编辑视图
+    connect(medicineView, SIGNAL(goMedicineEditView(int)), this, SLOT(goMedicineEditView(int)));
+}
+// 新增：跳转到药品编辑视图
+void MastrView::goMedicineEditView(int rowNo)
+{
+    qDebug() << "goMedicineEditView, row:" << rowNo;
+    medicineEditView = new MedicineEditView(this, rowNo);
+    pushWidgetToStackView(medicineEditView);
+
+    connect(medicineEditView, SIGNAL(goPreviousView()), this, SLOT(goPreviousView()));
+}
+
+void MastrView::pushWidgetToStackView(QWidget *widget)
+{
+    ui->stackedWidget->addWidget(widget);
+    int count = ui->stackedWidget->count();
+    ui->stackedWidget->setCurrentIndex(count - 1);
+    ui->labelTitle->setText(widget->windowTitle());
 }

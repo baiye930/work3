@@ -68,6 +68,32 @@ public:
     QSqlTableModel *departmentTabModel;
     QItemSelectionModel *theDepartmentSelection;
 
+    // 药品管理方法（新增）
+    bool initMedicineModel();
+    int addNewMedicine();
+    bool searchMedicine(const QString &filter);
+    bool deleteCurrentMedicine();
+    bool submitMedicineEdit();
+    void revertMedicineEdit();
+
+    // 库存管理方法
+    bool stockIn(const QString &medicineId, int quantity, const QString &batchNumber = "",
+                 const QDate &expiryDate = QDate());
+    bool stockOut(const QString &medicineId, int quantity, const QString &referenceId = "");
+    bool adjustStock(const QString &medicineId, int newQuantity);
+
+    // 预警方法
+    QList<QString> getLowStockMedicines(int threshold = 10);
+    QList<QString> getNearExpiryMedicines(int days = 30);
+    double getTotalInventoryValue();
+
+    // 获取药品分类列表
+    QStringList getMedicineCategories();
+    QStringList getDosageForms();
+
+    // 获取模型指针
+    QSqlTableModel *medicineTabModel;
+    QItemSelectionModel *theMedicineSelection;
 
     QSqlTableModel *patientTabModel;
     QItemSelectionModel *thePatientSelection;
