@@ -1,81 +1,155 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>PatientView</class>
- <widget class="QWidget" name="PatientView">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>487</width>
-    <height>366</height>
-   </rect>
-  </property>
-  <property name="windowTitle">
-   <string>患者管理</string>
-  </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QLineEdit" name="txtSearch">
-       <property name="placeholderText">
-        <string>请输入姓名进行查找</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btSearch">
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset resource="lab4.qrc">
-         <normaloff>:/tu/c.png</normaloff>:/tu/c.png</iconset>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btAdd">
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset resource="lab4.qrc">
-         <normaloff>:/tu/j.png</normaloff>:/tu/j.png</iconset>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btDelete">
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset resource="lab4.qrc">
-         <normaloff>:/tu/s.png</normaloff>:/tu/s.png</iconset>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btEdit">
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset resource="lab4.qrc">
-         <normaloff>:/tu/g.png</normaloff>:/tu/g.png</iconset>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="QTableView" name="tableView"/>
-   </item>
-  </layout>
- </widget>
- <resources>
-  <include location="lab4.qrc"/>
- </resources>
- <connections/>
+<class>PatientView</class>
+<widget class="QWidget" name="PatientView">
+ <property name="geometry">
+  <rect>
+   <x>0</x>
+   <y>0</y>
+   <width>900</width>
+   <height>550</height>
+  </rect>
+ </property>
+ <property name="windowTitle">
+  <string>患者管理</string>
+ </property>
+ <layout class="QVBoxLayout" name="verticalLayout">
+  <item>
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="QLineEdit" name="txtSearch">
+      <property name="placeholderText">
+       <string>请输入姓名进行查找</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btSearch">
+      <property name="text">
+       <string>搜索</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <spacer name="horizontalSpacer">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btAdd">
+      <property name="text">
+       <string>添加</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btDelete">
+      <property name="text">
+       <string>删除</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btEdit">
+      <property name="text">
+       <string>编辑</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btnViewHistory">
+      <property name="text">
+       <string>就诊历史</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btnAppointment">
+      <property name="text">
+       <string>新建预约</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </item>
+  <item>
+   <widget class="QTableView" name="tableView">
+    <property name="alternatingRowColors">
+     <bool>true</bool>
+    </property>
+    <property name="selectionMode">
+     <enum>QAbstractItemView::SingleSelection</enum>
+    </property>
+    <property name="selectionBehavior">
+     <enum>QAbstractItemView::SelectRows</enum>
+    </property>
+    <property name="sortingEnabled">
+     <bool>true</bool>
+    </property>
+   </widget>
+  </item>
+  <item>
+   <layout class="QHBoxLayout" name="horizontalLayout_2">
+    <item>
+     <widget class="QLabel" name="lblPatientCount">
+      <property name="text">
+       <string>患者总数：0</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="lblTodayNew">
+      <property name="text">
+       <string>今日新增：0</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="lblMonthNew">
+      <property name="text">
+       <string>本月新增：0</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <spacer name="horizontalSpacer_2">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btnExport">
+      <property name="text">
+       <string>导出</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btnStatistics">
+      <property name="text">
+       <string>统计</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </item>
+ </layout>
+</widget>
+<resources/>
+<connections/>
 </ui>

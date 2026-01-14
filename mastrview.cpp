@@ -40,7 +40,10 @@ void MastrView::goWelcomView()
     connect(welcomeView,SIGNAL(goDoctorView()),this,SLOT(goDoctorView()));
     connect(welcomeView,SIGNAL(goPatientView()),this,SLOT(goPatientView()));
     connect(welcomeView,SIGNAL(goDepartmentView()),this,SLOT(goDepartmentView()));
-
+    connect(welcomeView,SIGNAL(goPrescriptionview()),this,SLOT(goPrescriptionview()));
+    connect(welcomeView,SIGNAL(gomedicineview()),this,SLOT(gomedicineview()));
+    connect(welcomeView,SIGNAL(goconsult_recordview()),this,SLOT(goconsult_recordview()));
+    connect(welcomeView,SIGNAL(goappointmentview()),this,SLOT(goappointmentview()));
 
 }
 
@@ -94,6 +97,35 @@ void MastrView::goPreviousView()
         delete widget;
     }
 
+}
+
+void MastrView::goPrescriptionview()
+{
+
+    qDebug() << "goPrescriptionview";
+    prescriptionView = new Prescriptionview(this);
+    pushWidgetToStackView(prescriptionView);
+}
+
+void MastrView::gomedicineview()
+{
+    qDebug() << "gomedicineview";
+    medicineView = new medicineview(this);
+    pushWidgetToStackView(medicineView);
+}
+
+void MastrView::goconsult_recordview()
+{
+    qDebug() << "goconsult_recordview";
+    consult_recordView = new consult_recordview(this);
+    pushWidgetToStackView(consult_recordView);
+}
+
+void MastrView::goappointmentview()
+{
+    qDebug() << "goappointmentview";
+    appointmentView = new appointmentview(this);
+    pushWidgetToStackView(appointmentView);
 }
 
 

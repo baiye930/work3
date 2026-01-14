@@ -10,33 +10,48 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    appointmentview.cpp \
+    consult_recordview.cpp \
     departmentview.cpp \
+    doctoreditview.cpp \
     doctorview.cpp \
     idatabase.cpp \
     loginview.cpp \
     main.cpp \
     mastrview.cpp \
+    medicineview.cpp \
     patienteditview.cpp \
     patientview.cpp \
+    prescriptionview.cpp \
     welcomview.cpp
 
 HEADERS += \
+    appointmentview.h \
+    consult_recordview.h \
     departmentview.h \
+    doctoreditview.h \
     doctorview.h \
     idatabase.h \
     loginview.h \
     mastrview.h \
+    medicineview.h \
     patienteditview.h \
     patientview.h \
+    prescriptionview.h \
     welcomview.h
 
 FORMS += \
+    appointmentview.ui \
+    consult_recordview.ui \
     departmentview.ui \
+    doctoreditview.ui \
     doctorview.ui \
     loginview.ui \
     mastrview.ui \
+    medicineview.ui \
     patienteditview.ui \
     patientview.ui \
+    prescriptionview.ui \
     welcomview.ui
 
 # Default rules for deployment.
@@ -45,4 +60,4 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 RESOURCES += \
-    lab4.qrc
+    resources.qrc

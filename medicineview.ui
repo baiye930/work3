@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+<class>medicineview</class>
+<widget class="QWidget" name="medicineview">
+ <property name="geometry">
+  <rect>
+   <x>0</x>
+   <y>0</y>
+   <width>1000</width>
+   <height>600</height>
+  </rect>
+ </property>
+ <property name="windowTitle">
+  <string>药品管理</string>
+ </property>
+ <layout class="QVBoxLayout" name="verticalLayout">
+  <item>
+   <layout class="QHBoxLayout" name="filterLayout">
+    <item>
+     <widget class="QLabel" name="label">
+      <property name="text">
+       <string>搜索：</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="txtSearch">
+      <property name="placeholderText">
+       <string>药品名称、编码或生产厂家</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="label_2">
+      <property name="text">
+       <string>分类：</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QComboBox" name="cmbCategory">
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btSearch">
+      <property name="text">
+       <string>搜索</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <spacer name="horizontalSpacer">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btnLowStock">
+      <property name="text">
+       <string>低库存</string>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color: red;</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btnNearExpiry">
+      <property name="text">
+       <string>近效期</string>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color: orange;</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </item>
+  <item>
+   <layout class="QHBoxLayout" name="buttonLayout">
+    <item>
+     <widget class="QPushButton" name="btAdd">
+      <property name="text">
+       <string>添加药品</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btDelete">
+      <property name="text">
+       <string>删除</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btEdit">
+      <property name="text">
+       <string>编辑</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btnStockIn">
+      <property name="text">
+       <string>入库</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btnStockOut">
+      <property name="text">
+       <string>出库</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btnAdjustStock">
+      <property name="text">
+       <string>库存调整</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <spacer name="horizontalSpacer_2">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btnExport">
+      <property name="text">
+       <string>导出</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btnPrint">
+      <property name="text">
+       <string>打印</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </item>
+  <item>
+   <widget class="QTableView" name="tableView">
+    <property name="alternatingRowColors">
+     <bool>true</bool>
+    </property>
+    <property name="selectionMode">
+     <enum>QAbstractItemView::SingleSelection</enum>
+    </property>
+    <property name="selectionBehavior">
+     <enum>QAbstractItemView::SelectRows</enum>
+    </property>
+    <property name="sortingEnabled">
+     <bool>true</bool>
+    </property>
+   </widget>
+  </item>
+  <item>
+   <layout class="QHBoxLayout" name="statsLayout">
+    <item>
+     <widget class="QLabel" name="lblStockWarning">
+      <property name="text">
+       <string>库存预警：0种药品</string>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color: red; font-weight: bold;</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="lblExpiryWarning">
+      <property name="text">
+       <string>近效期：0种药品</string>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color: orange; font-weight: bold;</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <spacer name="horizontalSpacer_3">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QLabel" name="lblTotalValue">
+      <property name="text">
+       <string>库存总值：0.00元</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </item>
+ </layout>
+</widget>
+<resources/>
+<connections/>
+</ui>

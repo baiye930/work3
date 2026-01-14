@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/">
+        <file>../../tu/back.png</file>
+        <file>../../tu/ logout.png</file>
+        <file>../../tu/search.png</file>
+        <file>../../tu/edit.png</file>
+        <file>../../tu/add.png</file>
+        <file>../../tu/delete.png</file>
+        <file>../../tu/refresh.png</file>
+        <file>../../tu/export.png</file>
+    </qresource>
+</RCC>

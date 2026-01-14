@@ -8,6 +8,10 @@
 #include "patienteditview.h"
 #include "patientview.h"
 #include "welcomview.h"
+#include "appointmentview.h"
+#include "consult_recordview.h"
+#include "medicineview.h"
+#include "prescriptionview.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -31,6 +35,10 @@ public slots:
     void goPatientEditView(int rowNo);
     void goPatientView();
     void goPreviousView();
+    void goPrescriptionview();
+    void gomedicineview();
+    void goconsult_recordview();
+    void goappointmentview();
 
 private slots:
     void on_stackedWidget_currentChanged(int arg1);
@@ -50,6 +58,10 @@ private:
     DepartmentView *departmentView;
     LoginView *loginView;
     PatientEditView *patientEditView;
+    appointmentview *appointmentView;
+    consult_recordview *consult_recordView;
+    medicineview *medicineView;
+    Prescriptionview *prescriptionView;
 
 };
 #endif // MASTRVIEW_H
