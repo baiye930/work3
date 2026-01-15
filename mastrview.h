@@ -15,6 +15,10 @@
 #include "doctoreditview.h"  // 确保包含这个头文件
 #include "departmenteditview.h"
 #include "medicineeditview.h"
+#include "prescriptioneditview.h"
+
+
+
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MastrView;
@@ -44,6 +48,9 @@ public slots:
     void goDoctorEditView(int rowNo);  // 添加医生编辑视图槽函数
    void goDepartmentEditView(int rowNo);  // 添加科室编辑视图槽函数
  void goMedicineEditView(int rowNo);  // 添加药品编辑视图槽函数
+   void goPrescriptionEditView(int rowNo);  // 添加处方编辑视图槽函数
+
+
 private slots:
     void on_stackedWidget_currentChanged(int arg1);
 
@@ -69,6 +76,9 @@ private:
     DoctoreditView *doctorEditView;  // 添加医生编辑视图指针
        DepartmentEditView *departmentEditView;  // 添加科室编辑视图指针
    MedicineEditView *medicineEditView;  // 添加药品编辑视图指针
+         PrescriptionEditView *prescriptionEditView;  // 添加处方编辑视图指针
+
+
 };
 
 #endif // MASTRVIEW_H

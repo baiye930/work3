@@ -21,6 +21,7 @@ SOURCES += \
     main.cpp \
     mastrview.cpp \
     medicineeditview.cpp \
+    medicineselectdialog.cpp \
     medicineview.cpp \
     patienteditview.cpp \
     patientview.cpp \
@@ -40,6 +41,7 @@ HEADERS += \
     loginview.h \
     mastrview.h \
     medicineeditview.h \
+    medicineselectdialog.h \
     medicineview.h \
     patienteditview.h \
     patientview.h \
@@ -58,6 +60,7 @@ FORMS += \
     loginview.ui \
     mastrview.ui \
     medicineeditview.ui \
+    medicineselectdialog.ui \
     medicineview.ui \
     patienteditview.ui \
     patientview.ui \

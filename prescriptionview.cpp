@@ -4,6 +4,7 @@
 #include <QMessageBox>
 #include <QDebug>
 #include <QSqlQuery>
+#include <QInputDialog>
 
 // 自定义委托，用于高亮显示
 class PrescriptionHighlightDelegate : public QStyledItemDelegate

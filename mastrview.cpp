@@ -6,6 +6,7 @@
 #include "medicineeditview.h"
 // 需要包含科室编辑视图头文件
 #include "departmenteditview.h"
+#include "prescriptioneditview.h"
 
 MastrView::MastrView(QWidget *parent)
     : QWidget(parent)
@@ -22,7 +23,8 @@ MastrView::MastrView(QWidget *parent)
     , prescriptionView(nullptr)
     , doctorEditView(nullptr)
     , departmentEditView(nullptr)
-    , medicineEditView(nullptr)  // 初始化药品编辑视图指针
+    , medicineEditView(nullptr)
+    , prescriptionEditView(nullptr)  // 初始化处方编辑视图指针
 {
     ui->setupUi(this);
 
@@ -114,12 +116,7 @@ void MastrView::goPreviousView()
     }
 }
 
-void MastrView::goPrescriptionview()
-{
-    qDebug() << "goPrescriptionview";
-    prescriptionView = new Prescriptionview(this);
-    pushWidgetToStackView(prescriptionView);
-}
+
 
 
 
@@ -212,4 +209,21 @@ void MastrView::pushWidgetToStackView(QWidget *widget)
     int count = ui->stackedWidget->count();
     ui->stackedWidget->setCurrentIndex(count - 1);
     ui->labelTitle->setText(widget->windowTitle());
+}
+void MastrView::goPrescriptionview()
+{
+    qDebug() << "goPrescriptionview";
+    prescriptionView = new Prescriptionview(this);
+    pushWidgetToStackView(prescriptionView);
+
+    // 连接信号，跳到处方编辑视图
+    connect(prescriptionView, SIGNAL(goPrescriptionEditView(int)), this, SLOT(goPrescriptionEditView(int)));
+}
+void MastrView::goPrescriptionEditView(int rowNo)
+{
+    qDebug() << "goPrescriptionEditView, row:" << rowNo;
+    prescriptionEditView = new PrescriptionEditView(this, rowNo);
+    pushWidgetToStackView(prescriptionEditView);
+
+    connect(prescriptionEditView, SIGNAL(goPreviousView()), this, SLOT(goPreviousView()));
 }
