@@ -449,37 +449,65 @@ bool IDatabase::initMedicineModel()
 
 int IDatabase::addNewMedicine()
 {
-    medicineTabModel->insertRow(medicineTabModel->rowCount(), QModelIndex());
+    // 1. 插入新行
+    int row = medicineTabModel->rowCount();
+    medicineTabModel->insertRow(row);
 
-    QModelIndex curIndex = medicineTabModel->index(medicineTabModel->rowCount() - 1, 0);
-    int curRecNo = curIndex.row();
-    QSqlRecord curRec = medicineTabModel->record(curRecNo);
+    // 2. 生成唯一的药品编码
+    QString medicineCode;
+    bool isUnique = false;
+    int maxRetry = 5;
 
-    // 生成药品编码（规则：MED + 年月日 + 4位随机数）
-    QString dateStr = QDate::currentDate().toString("yyyyMMdd");
-    QString randomStr = QString::number(QRandomGenerator::global()->bounded(1000, 9999));
-    QString medicineCode = "MED" + dateStr + randomStr;
+    while (!isUnique && maxRetry > 0) {
+        QString dateStr = QDate::currentDate().toString("yyyyMMdd");
+        int randomNum = QRandomGenerator::global()->bounded(1000, 10000);
+        medicineCode = QString("MED%1%2").arg(dateStr).arg(randomNum);
 
-    // 设置默认值
-    curRec.setValue("id", QUuid::createUuid().toString(QUuid::WithoutBraces));
-    curRec.setValue("code", medicineCode);
-    curRec.setValue("created_time", QDateTime::currentDateTime());
-    curRec.setValue("status", "active");
-    curRec.setValue("category", "西药");
-    curRec.setValue("unit", "盒");
-    curRec.setValue("dosage_form", "片剂");
-    curRec.setValue("price", 0.0);
-    curRec.setValue("cost", 0.0);
-    curRec.setValue("stock", 0);
-    curRec.setValue("min_stock", 10);
-    curRec.setValue("max_stock", 1000);
-    curRec.setValue("expiration_days", 365 * 2); // 默认有效期2年
+        // 简单查重
+        QSqlQuery query(database);
+        query.prepare("SELECT COUNT(*) FROM medicine WHERE code = ?");
+        query.addBindValue(medicineCode);
+        if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+            isUnique = true;
+        } else {
+            maxRetry--;
+        }
+    }
 
-    medicineTabModel->setRecord(curRecNo, curRec);
+    // 3. 获取各字段的索引 (防止字段名拼写错误)
+    int idxId = medicineTabModel->fieldIndex("id");
+    int idxCode = medicineTabModel->fieldIndex("code");
+    int idxCreated = medicineTabModel->fieldIndex("created_time");
+    int idxStatus = medicineTabModel->fieldIndex("status");
+    int idxCat = medicineTabModel->fieldIndex("category");
+    int idxUnit = medicineTabModel->fieldIndex("unit");
+    int idxForm = medicineTabModel->fieldIndex("dosage_form");
+    int idxPrice = medicineTabModel->fieldIndex("price");
+    int idxStock = medicineTabModel->fieldIndex("stock");
 
-    qDebug() << "新增药品，ID：" << curRec.value("id").toString()
-             << "，编码：" << curRec.value("code").toString();
-    return curRecNo;
+    // 检查字段是否存在
+    if (idxCode == -1) {
+        qDebug() << "严重错误：数据库中找不到 'code' 字段！请检查表结构。";
+        return -1;
+    }
+
+    // 4. 使用 setData 直接设置数据 (比 setRecord 更可靠)
+    QModelIndex indexId = medicineTabModel->index(row, idxId);
+    QModelIndex indexCode = medicineTabModel->index(row, idxCode);
+
+    medicineTabModel->setData(indexId, QUuid::createUuid().toString(QUuid::WithoutBraces));
+    medicineTabModel->setData(indexCode, medicineCode); // 重点：设置编码
+    medicineTabModel->setData(medicineTabModel->index(row, idxCreated), QDateTime::currentDateTime());
+    medicineTabModel->setData(medicineTabModel->index(row, idxStatus), "active");
+    medicineTabModel->setData(medicineTabModel->index(row, idxCat), "西药");
+    medicineTabModel->setData(medicineTabModel->index(row, idxUnit), "盒");
+    medicineTabModel->setData(medicineTabModel->index(row, idxForm), "片剂");
+    medicineTabModel->setData(medicineTabModel->index(row, idxPrice), 0.0);
+    medicineTabModel->setData(medicineTabModel->index(row, idxStock), 0);
+
+    qDebug() << "新增药品行号：" << row << " 生成编码：" << medicineCode;
+
+    return row;
 }
 
 bool IDatabase::searchMedicine(const QString &filter)

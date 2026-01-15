@@ -270,26 +270,31 @@ void MedicineEditView::on_btnSave_clicked()
         return;
     }
 
-    // 获取当前记录
+    // 获取当前模型
     QSqlTableModel *tabModel = IDatabase::getInstance().medicineTabModel;
-    QSqlRecord rec = tabModel->record(dataMapper->currentIndex());
 
-    // 设置分类、剂型和状态
+    // 1. 确保当前 Mapper 的数据写入模型缓存
+    dataMapper->submit();
+
+    // 2. 手动更新下拉框的值 (因为 Mapper 可能没映射下拉框)
+    QSqlRecord rec = tabModel->record(dataMapper->currentIndex());
     rec.setValue("category", ui->cmbCategory->currentText());
     rec.setValue("dosage_form", ui->cmbDosageForm->currentText());
     rec.setValue("status", ui->cmbStatus->currentText());
     rec.setValue("expiration_days", ui->spinExpirationDays->value());
 
-    // 更新记录
+    // 把记录写回模型
     tabModel->setRecord(dataMapper->currentIndex(), rec);
 
-    // 提交更改
+    // 3. 提交到数据库并检查错误
     if (IDatabase::getInstance().submitMedicineEdit()) {
-        QMessageBox::information(this, "成功",
-                                 isNewMedicine ? "药品添加成功" : "药品信息更新成功");
+        QMessageBox::information(this, "成功", isNewMedicine ? "药品添加成功" : "更新成功");
         emit goPreviousView();
     } else {
-        QMessageBox::warning(this, "错误", "保存失败，请检查数据是否正确");
+        // --- 重点：显示具体的数据库错误 ---
+        QString err = tabModel->lastError().text();
+        qDebug() << "提交失败原因：" << err;
+        QMessageBox::critical(this, "保存失败", "数据库错误：" + err);
     }
 }
 
