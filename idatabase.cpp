@@ -1678,10 +1678,10 @@ bool IDatabase::initConsultRecordModel()
     consultRecordTabModel->setTable("consult_record");
     consultRecordTabModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
 
-    // 设置表头显示名称
+    // 设置表头显示名称 - 将 "consult_date" 改为 "visit_date"
     consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("patient_id"), Qt::Horizontal, "患者");
     consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("doctor_id"), Qt::Horizontal, "医生");
-    consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("consult_date"), Qt::Horizontal, "就诊日期");
+    consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("visit_date"), Qt::Horizontal, "就诊日期");  // 改为 visit_date
     consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("department_id"), Qt::Horizontal, "科室");
     consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("diagnosis"), Qt::Horizontal, "诊断");
     consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("symptoms"), Qt::Horizontal, "症状");
@@ -1691,8 +1691,8 @@ bool IDatabase::initConsultRecordModel()
     consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("notes"), Qt::Horizontal, "备注");
     consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("next_visit_date"), Qt::Horizontal, "复诊日期");
 
-    // 按就诊日期倒序排序（最新的在前）
-    consultRecordTabModel->setSort(consultRecordTabModel->fieldIndex("consult_date"), Qt::DescendingOrder);
+    // 按就诊日期倒序排序（最新的在前）- 改为 visit_date
+    consultRecordTabModel->setSort(consultRecordTabModel->fieldIndex("visit_date"), Qt::DescendingOrder);
 
     if (!consultRecordTabModel->select()) {
         qDebug() << "初始化就诊记录模型失败：" << consultRecordTabModel->lastError();
@@ -1712,9 +1712,9 @@ int IDatabase::addNewConsultRecord()
     int curRecNo = curIndex.row();
     QSqlRecord curRec = consultRecordTabModel->record(curRecNo);
 
-    // 设置默认值
+    // 设置默认值 - 将 "consult_date" 改为 "visit_date"
     curRec.setValue("id", QUuid::createUuid().toString(QUuid::WithoutBraces));
-    curRec.setValue("consult_date", QDateTime::currentDateTime());
+    curRec.setValue("visit_date", QDateTime::currentDateTime());  // 改为 visit_date
     curRec.setValue("consult_fee", 0.0);
     curRec.setValue("created_time", QDateTime::currentDateTime());
     curRec.setValue("status", "active");
@@ -1806,7 +1806,7 @@ int IDatabase::getTodayConsultCount()
 {
     int count = 0;
     QSqlQuery query;
-    query.prepare("SELECT COUNT(*) FROM consult_record WHERE DATE(consult_date) = DATE('now')");
+    query.prepare("SELECT COUNT(*) FROM consult_record WHERE DATE(visit_date) = DATE('now')");  // 改为 visit_date
 
     if (query.exec() && query.next()) {
         count = query.value(0).toInt();
@@ -1819,7 +1819,7 @@ int IDatabase::getMonthConsultCount()
 {
     int count = 0;
     QSqlQuery query;
-    query.prepare("SELECT COUNT(*) FROM consult_record WHERE strftime('%Y-%m', consult_date) = strftime('%Y-%m', 'now')");
+   query.prepare("SELECT COUNT(*) FROM consult_record WHERE strftime('%Y-%m', visit_date) = strftime('%Y-%m', 'now')");  // 改为 visit_date
 
     if (query.exec() && query.next()) {
         count = query.value(0).toInt();
@@ -1834,14 +1834,14 @@ QMap<QString, QVariant> IDatabase::getConsultSummaryStats()
 
     // 今日诊费总额
     QSqlQuery todayFeeQuery;
-    todayFeeQuery.prepare("SELECT SUM(consult_fee) as total_fee FROM consult_record WHERE DATE(consult_date) = DATE('now')");
+    todayFeeQuery.prepare("SELECT SUM(consult_fee) as total_fee FROM consult_record WHERE DATE(visit_date) = DATE('now')");
     if (todayFeeQuery.exec() && todayFeeQuery.next()) {
         stats["today_fee"] = todayFeeQuery.value("total_fee").toDouble();
     }
 
     // 本月诊费总额
     QSqlQuery monthFeeQuery;
-    monthFeeQuery.prepare("SELECT SUM(consult_fee) as total_fee FROM consult_record WHERE strftime('%Y-%m', consult_date) = strftime('%Y-%m', 'now')");
+    monthFeeQuery.prepare("SELECT SUM(consult_fee) as total_fee FROM consult_record WHERE strftime('%Y-%m', visit_date) = strftime('%Y-%m', 'now')");
     if (monthFeeQuery.exec() && monthFeeQuery.next()) {
         stats["month_fee"] = monthFeeQuery.value("total_fee").toDouble();
     }
@@ -1851,7 +1851,7 @@ QMap<QString, QVariant> IDatabase::getConsultSummaryStats()
     deptQuery.prepare("SELECT d.name as department, COUNT(*) as count "
                       "FROM consult_record cr "
                       "LEFT JOIN department d ON cr.department_id = d.id "
-                      "WHERE DATE(cr.consult_date) = DATE('now') "
+                      "WHERE DATE(cr.visit_date) = DATE('now') "  // 改为 visit_date
                       "GROUP BY cr.department_id "
                       "ORDER BY count DESC LIMIT 5");
 

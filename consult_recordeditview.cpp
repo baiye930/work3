@@ -43,10 +43,10 @@ ConsultRecordEditView::ConsultRecordEditView(QWidget *parent, int index)
     dataMapper->setModel(tabModel);
     dataMapper->setSubmitPolicy(QDataWidgetMapper::AutoSubmit);
 
-    // 添加映射
+    // 添加映射 - 将 consult_date 改为 visit_date
     dataMapper->addMapping(ui->txtPatientId, tabModel->fieldIndex("patient_id"));
     dataMapper->addMapping(ui->txtDoctorId, tabModel->fieldIndex("doctor_id"));
-    dataMapper->addMapping(ui->dateConsultDate, tabModel->fieldIndex("consult_date"));
+    dataMapper->addMapping(ui->dateConsultDate, tabModel->fieldIndex("visit_date"));  // 改为 visit_date
     dataMapper->addMapping(ui->txtDiagnosis, tabModel->fieldIndex("diagnosis"));
     dataMapper->addMapping(ui->txtSymptoms, tabModel->fieldIndex("symptoms"));
     dataMapper->addMapping(ui->txtTreatment, tabModel->fieldIndex("treatment"));

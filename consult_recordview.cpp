@@ -20,10 +20,10 @@ public:
         QSqlTableModel *model = qobject_cast<QSqlTableModel*>(const_cast<QAbstractItemModel*>(index.model()));
         if (model) {
             QSqlRecord rec = model->record(index.row());
-            QDate consultDate = rec.value("consult_date").toDate();
+            QDate visitDate = rec.value("visit_date").toDate();  // 改为 visit_date
 
             // 如果是今天或未来的预约，高亮显示
-            if (consultDate >= QDate::currentDate()) {
+            if (visitDate >= QDate::currentDate()) {
                 option->backgroundBrush = QBrush(QColor(240, 255, 240)); // 淡绿色
             }
         }
@@ -89,7 +89,7 @@ void consult_recordview::initTableView()
         ui->tableView->setColumnWidth(iDatabase.consultRecordTabModel->fieldIndex("diagnosis"), 150);
         ui->tableView->setColumnWidth(iDatabase.consultRecordTabModel->fieldIndex("consult_fee"), 80);
         ui->tableView->setColumnWidth(iDatabase.consultRecordTabModel->fieldIndex("prescription_id"), 120);
-        ui->tableView->setColumnWidth(iDatabase.consultRecordTabModel->fieldIndex("next_visit_date"), 100);
+        ui->tableView->setColumnWidth(iDatabase.consultRecordTabModel->fieldIndex("visit_date"), 120);  // 改为 visit_date
     } else {
         QMessageBox::warning(this, "错误", "初始化就诊记录数据失败");
     }
@@ -256,12 +256,11 @@ void consult_recordview::on_btnStatistics_clicked()
                              "3. 显示常见诊断统计\n"
                              "4. 生成统计图表");
 }
-
 void consult_recordview::on_dateFilter_dateChanged(const QDate &date)
 {
     QString dateStr = date.toString("yyyy-MM-dd");
     IDatabase::getInstance().consultRecordTabModel->setFilter(
-        QString("DATE(consult_date) = '%1'").arg(dateStr));
+        QString("DATE(visit_date) = '%1'").arg(dateStr));  // 改为 visit_date
     IDatabase::getInstance().consultRecordTabModel->select();
     updateStats();
 }
