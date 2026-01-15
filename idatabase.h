@@ -136,6 +136,36 @@ public:
     QSqlTableModel *doctorTabModel;          // 新增医生模型
     QItemSelectionModel *theDoctorSelection; // 新增医生选择模型
 
+    // 预约管理方法（新增）
+    bool initAppointmentModel();
+    int addNewAppointment();
+    bool searchAppointment(const QString &filter);
+    bool deleteCurrentAppointment();
+    bool submitAppointmentEdit();
+    void revertAppointmentEdit();
+
+    // 获取预约状态列表
+    QStringList getAppointmentStatuses();
+
+    // 获取预约模型指针
+    QSqlTableModel *appointmentTabModel;
+    QItemSelectionModel *theAppointmentSelection;
+
+    // 统计方法
+    QMap<QString, QVariant> getTodayAppointmentStats();
+    QMap<QString, QVariant> getTomorrowAppointmentStats();
+    QMap<QString, QVariant> getAppointmentSummaryStats();
+
+    // 状态操作
+    bool updateAppointmentStatus(const QString &appointmentId, const QString &newStatus);
+
+    // 获取医生和患者列表
+    QList<QString> getPatientsForCombo();
+    QList<QString> getDoctorsForAppointmentCombo();
+
+    // 预约时间冲突检查
+    bool checkTimeConflict(const QString &doctorId, const QDateTime &appointmentTime,
+                           const QString &excludeAppointmentId = "");
 
 };
 

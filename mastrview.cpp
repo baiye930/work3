@@ -8,6 +8,7 @@
 #include "departmenteditview.h"
 #include "prescriptioneditview.h"
 
+#include "appointmenteditview.h"
 MastrView::MastrView(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::MastrView)
@@ -25,6 +26,7 @@ MastrView::MastrView(QWidget *parent)
     , departmentEditView(nullptr)
     , medicineEditView(nullptr)
     , prescriptionEditView(nullptr)  // 初始化处方编辑视图指针
+    ,appointmentEditView(nullptr)
 {
     ui->setupUi(this);
 
@@ -62,6 +64,8 @@ void MastrView::goWelcomView()
     connect(welcomeView, SIGNAL(gomedicineview()), this, SLOT(gomedicineview()));
     connect(welcomeView, SIGNAL(goconsult_recordview()), this, SLOT(goconsult_recordview()));
     connect(welcomeView, SIGNAL(goappointmentview()), this, SLOT(goappointmentview()));
+    connect(appointmentView, SIGNAL(goAppointmentEditView(int)),
+            this, SLOT(goAppointmentEditView(int)));
 }
 
 void MastrView::goDoctorView()
@@ -127,12 +131,7 @@ void MastrView::goconsult_recordview()
     pushWidgetToStackView(consult_recordView);
 }
 
-void MastrView::goappointmentview()
-{
-    qDebug() << "goappointmentview";
-    appointmentView = new appointmentview(this);
-    pushWidgetToStackView(appointmentView);
-}
+
 
 void MastrView::goDoctorEditView(int rowNo)
 {
@@ -226,4 +225,26 @@ void MastrView::goPrescriptionEditView(int rowNo)
     pushWidgetToStackView(prescriptionEditView);
 
     connect(prescriptionEditView, SIGNAL(goPreviousView()), this, SLOT(goPreviousView()));
+}
+
+
+void MastrView::goappointmentview()
+{
+    qDebug() << "goappointmentview";
+    appointmentView = new appointmentview(this);
+    pushWidgetToStackView(appointmentView);
+
+    // 连接信号，跳转到预约编辑界面
+    connect(appointmentView, SIGNAL(goAppointmentEditView(int)),
+            this, SLOT(goAppointmentEditView(int)));
+}
+// 实现跳转函数
+void MastrView::goAppointmentEditView(int rowNo)
+{
+    qDebug() << "goAppointmentEditView, row:" << rowNo;
+    appointmentEditView = new AppointmentEditView(this, rowNo);
+    pushWidgetToStackView(appointmentEditView);
+
+    connect(appointmentEditView, SIGNAL(goPreviousView()),
+            this, SLOT(goPreviousView()));
 }

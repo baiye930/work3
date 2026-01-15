@@ -16,8 +16,7 @@
 #include "departmenteditview.h"
 #include "medicineeditview.h"
 #include "prescriptioneditview.h"
-
-
+#include "appointmenteditview.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -49,7 +48,7 @@ public slots:
    void goDepartmentEditView(int rowNo);  // 添加科室编辑视图槽函数
  void goMedicineEditView(int rowNo);  // 添加药品编辑视图槽函数
    void goPrescriptionEditView(int rowNo);  // 添加处方编辑视图槽函数
-
+void goAppointmentEditView(int rowNo);
 
 private slots:
     void on_stackedWidget_currentChanged(int arg1);
@@ -77,8 +76,7 @@ private:
        DepartmentEditView *departmentEditView;  // 添加科室编辑视图指针
    MedicineEditView *medicineEditView;  // 添加药品编辑视图指针
          PrescriptionEditView *prescriptionEditView;  // 添加处方编辑视图指针
-
-
+AppointmentEditView *appointmentEditView;  // 添加指针
 };
 
 #endif // MASTRVIEW_H

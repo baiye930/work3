@@ -1328,3 +1328,344 @@ QList<QString> IDatabase::getDoctorsForCombo()
 
     return doctors;
 }
+// 预约管理方法实现
+bool IDatabase::initAppointmentModel()
+{
+    appointmentTabModel = new QSqlTableModel(this, database);
+    appointmentTabModel->setTable("appointment");
+    appointmentTabModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
+
+    // 设置表头显示名称
+    appointmentTabModel->setHeaderData(appointmentTabModel->fieldIndex("patient_id"), Qt::Horizontal, "患者");
+    appointmentTabModel->setHeaderData(appointmentTabModel->fieldIndex("doctor_id"), Qt::Horizontal, "医生");
+    appointmentTabModel->setHeaderData(appointmentTabModel->fieldIndex("appointment_date"), Qt::Horizontal, "预约日期");
+    appointmentTabModel->setHeaderData(appointmentTabModel->fieldIndex("appointment_time"), Qt::Horizontal, "预约时间");
+    appointmentTabModel->setHeaderData(appointmentTabModel->fieldIndex("department_id"), Qt::Horizontal, "科室");
+    appointmentTabModel->setHeaderData(appointmentTabModel->fieldIndex("status"), Qt::Horizontal, "状态");
+    appointmentTabModel->setHeaderData(appointmentTabModel->fieldIndex("reason"), Qt::Horizontal, "事由");
+    appointmentTabModel->setHeaderData(appointmentTabModel->fieldIndex("notes"), Qt::Horizontal, "备注");
+    appointmentTabModel->setHeaderData(appointmentTabModel->fieldIndex("check_in_time"), Qt::Horizontal, "到诊时间");
+    appointmentTabModel->setHeaderData(appointmentTabModel->fieldIndex("check_out_time"), Qt::Horizontal, "离开时间");
+    appointmentTabModel->setHeaderData(appointmentTabModel->fieldIndex("created_time"), Qt::Horizontal, "创建时间");
+
+    // 按预约日期和时间排序（最新的在前）
+    appointmentTabModel->setSort(appointmentTabModel->fieldIndex("appointment_date"), Qt::DescendingOrder);
+    appointmentTabModel->setSort(appointmentTabModel->fieldIndex("appointment_time"), Qt::DescendingOrder);
+
+    if (!appointmentTabModel->select()) {
+        qDebug() << "初始化预约模型失败：" << appointmentTabModel->lastError();
+        return false;
+    }
+
+    theAppointmentSelection = new QItemSelectionModel(appointmentTabModel);
+    qDebug() << "预约模型初始化成功，记录数：" << appointmentTabModel->rowCount();
+    return true;
+}
+
+int IDatabase::addNewAppointment()
+{
+    // 生成预约号（规则：APT + 年月日 + 4位随机数）
+    QString dateStr = QDate::currentDate().toString("yyyyMMdd");
+    QString randomStr = QString::number(QRandomGenerator::global()->bounded(1000, 9999));
+    QString appointmentNumber = "APT" + dateStr + randomStr;
+
+    appointmentTabModel->insertRow(appointmentTabModel->rowCount(), QModelIndex());
+
+    QModelIndex curIndex = appointmentTabModel->index(appointmentTabModel->rowCount() - 1, 0);
+    int curRecNo = curIndex.row();
+    QSqlRecord curRec = appointmentTabModel->record(curRecNo);
+
+    // 设置默认值
+    curRec.setValue("id", QUuid::createUuid().toString(QUuid::WithoutBraces));
+    curRec.setValue("appointment_number", appointmentNumber);
+    curRec.setValue("appointment_date", QDate::currentDate());
+    curRec.setValue("appointment_time", QTime::currentTime());
+    curRec.setValue("created_time", QDateTime::currentDateTime());
+    curRec.setValue("status", "scheduled");
+    curRec.setValue("check_in_time", QDateTime());
+    curRec.setValue("check_out_time", QDateTime());
+
+    appointmentTabModel->setRecord(curRecNo, curRec);
+
+    qDebug() << "新增预约，ID：" << curRec.value("id").toString()
+             << "，预约号：" << curRec.value("appointment_number").toString();
+    return curRecNo;
+}
+
+bool IDatabase::searchAppointment(const QString &filter)
+{
+    if (filter.isEmpty()) {
+        appointmentTabModel->setFilter("");
+    } else {
+        // 构建复杂的查询条件，关联患者和医生表
+        QString whereClause = QString(
+                                  "appointment_number LIKE '%%1%' OR "
+                                  "id IN (SELECT id FROM appointment WHERE "
+                                  "patient_id IN (SELECT ID FROM patient WHERE name LIKE '%%1%') OR "
+                                  "doctor_id IN (SELECT id FROM doctor WHERE name LIKE '%%1%') OR "
+                                  "reason LIKE '%%1%')")
+                                  .arg(filter);
+        appointmentTabModel->setFilter(whereClause);
+    }
+
+    bool success = appointmentTabModel->select();
+    if (!success) {
+        qDebug() << "搜索预约失败：" << appointmentTabModel->lastError();
+    }
+    return success;
+}
+
+bool IDatabase::deleteCurrentAppointment()
+{
+    QModelIndex curIndex = theAppointmentSelection->currentIndex();
+    if (!curIndex.isValid()) {
+        qDebug() << "删除失败：未选择预约";
+        return false;
+    }
+
+    // 获取预约信息
+    QString appointmentId = appointmentTabModel->record(curIndex.row()).value("id").toString();
+    QString appointmentNumber = appointmentTabModel->record(curIndex.row()).value("appointment_number").toString();
+    QString status = appointmentTabModel->record(curIndex.row()).value("status").toString();
+
+    // 检查预约状态，已确认或已完成的预约不能删除
+    if (status == "confirmed" || status == "completed") {
+        qDebug() << "无法删除预约：" << appointmentNumber << "，状态为" << status;
+        return false;
+    }
+
+    // 执行删除
+    if (appointmentTabModel->removeRow(curIndex.row())) {
+        bool success = appointmentTabModel->submitAll();
+        if (success) {
+            appointmentTabModel->select(); // 刷新数据
+            qDebug() << "删除预约成功：" << appointmentNumber;
+        } else {
+            qDebug() << "删除预约失败：" << appointmentTabModel->lastError();
+        }
+        return success;
+    }
+
+    return false;
+}
+
+bool IDatabase::submitAppointmentEdit()
+{
+    bool success = appointmentTabModel->submitAll();
+    if (!success) {
+        qDebug() << "提交预约编辑失败：" << appointmentTabModel->lastError();
+    }
+    return success;
+}
+
+void IDatabase::revertAppointmentEdit()
+{
+    appointmentTabModel->revertAll();
+    qDebug() << "撤销预约编辑";
+}
+
+QStringList IDatabase::getAppointmentStatuses()
+{
+    return QStringList() << "scheduled" << "confirmed" << "checked_in"
+                         << "completed" << "cancelled" << "no_show";
+}
+
+QMap<QString, QVariant> IDatabase::getTodayAppointmentStats()
+{
+    QMap<QString, QVariant> stats;
+
+    // 获取今日预约统计
+    QSqlQuery query;
+    query.prepare("SELECT COUNT(*) as count FROM appointment WHERE DATE(appointment_date) = DATE('now')");
+
+    if (query.exec() && query.next()) {
+        stats["today_count"] = query.value("count").toInt();
+    } else {
+        stats["today_count"] = 0;
+    }
+
+    return stats;
+}
+
+QMap<QString, QVariant> IDatabase::getTomorrowAppointmentStats()
+{
+    QMap<QString, QVariant> stats;
+
+    // 获取明日预约统计
+    QSqlQuery query;
+    query.prepare("SELECT COUNT(*) as count FROM appointment WHERE DATE(appointment_date) = DATE('now', '+1 day')");
+
+    if (query.exec() && query.next()) {
+        stats["tomorrow_count"] = query.value("count").toInt();
+    } else {
+        stats["tomorrow_count"] = 0;
+    }
+
+    return stats;
+}
+
+QMap<QString, QVariant> IDatabase::getAppointmentSummaryStats()
+{
+    QMap<QString, QVariant> stats;
+
+    QSqlQuery query;
+    query.prepare("SELECT "
+                  "COUNT(*) as total, "
+                  "SUM(CASE WHEN status = 'scheduled' THEN 1 ELSE 0 END) as scheduled, "
+                  "SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) as confirmed, "
+                  "SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed, "
+                  "SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled, "
+                  "SUM(CASE WHEN status = 'no_show' THEN 1 ELSE 0 END) as no_show "
+                  "FROM appointment");
+
+    if (query.exec() && query.next()) {
+        stats["total"] = query.value("total").toInt();
+        stats["scheduled"] = query.value("scheduled").toInt();
+        stats["confirmed"] = query.value("confirmed").toInt();
+        stats["completed"] = query.value("completed").toInt();
+        stats["cancelled"] = query.value("cancelled").toInt();
+        stats["no_show"] = query.value("no_show").toInt();
+    } else {
+        stats["total"] = 0;
+        stats["scheduled"] = 0;
+        stats["confirmed"] = 0;
+        stats["completed"] = 0;
+        stats["cancelled"] = 0;
+        stats["no_show"] = 0;
+    }
+
+    return stats;
+}
+
+bool IDatabase::updateAppointmentStatus(const QString &appointmentId, const QString &newStatus)
+{
+    if (appointmentId.isEmpty() || newStatus.isEmpty()) {
+        return false;
+    }
+
+    QSqlQuery query;
+    query.prepare("UPDATE appointment SET status = ? WHERE id = ?");
+    query.addBindValue(newStatus);
+    query.addBindValue(appointmentId);
+
+    if (!query.exec()) {
+        qDebug() << "更新预约状态失败：" << query.lastError();
+        return false;
+    }
+
+    // 如果是到诊状态，记录到诊时间
+    if (newStatus == "checked_in") {
+        query.prepare("UPDATE appointment SET check_in_time = ? WHERE id = ?");
+        query.addBindValue(QDateTime::currentDateTime());
+        query.addBindValue(appointmentId);
+        query.exec();
+    }
+    // 如果是完成状态，记录离开时间
+    else if (newStatus == "completed") {
+        query.prepare("UPDATE appointment SET check_out_time = ?, status = ? WHERE id = ?");
+        query.addBindValue(QDateTime::currentDateTime());
+        query.addBindValue("completed");
+        query.addBindValue(appointmentId);
+        query.exec();
+    }
+
+    qDebug() << "更新预约状态成功，ID：" << appointmentId << "，新状态：" << newStatus;
+    return true;
+}
+
+QList<QString> IDatabase::getPatientsForCombo()
+{
+    QList<QString> patients;
+
+    // 如果patient表不存在，返回测试数据
+    QSqlQuery checkTable("SELECT name FROM sqlite_master WHERE type='table' AND name='patient'");
+    if (!checkTable.next()) {
+        // 表不存在，返回模拟数据
+        patients << "张三 (p001)" << "李四 (p002)" << "王五 (p003)"
+                 << "赵六 (p004)" << "钱七 (p005)" << "孙八 (p006)";
+        return patients;
+    }
+
+    QSqlQuery query("SELECT ID, name FROM patient ORDER BY name");
+
+    while (query.next()) {
+        QString displayText = QString("%1 (%2)")
+        .arg(query.value("name").toString())
+            .arg(query.value("ID").toString());
+        patients.append(displayText);
+    }
+
+    // 如果没有数据，添加默认选项
+    if (patients.isEmpty()) {
+        patients << "未选择患者";
+    }
+
+    return patients;
+}
+
+QList<QString> IDatabase::getDoctorsForAppointmentCombo()
+{
+    QList<QString> doctors;
+
+    // 如果doctor表不存在，返回测试数据
+    QSqlQuery checkTable("SELECT name FROM sqlite_master WHERE type='table' AND name='doctor'");
+    if (!checkTable.next()) {
+        // 表不存在，返回模拟数据
+        doctors << "张医生 (d001)" << "李医生 (d002)" << "王医生 (d003)";
+        return doctors;
+    }
+
+    QSqlQuery query("SELECT id, name FROM doctor WHERE status = 'active' ORDER BY name");
+
+    while (query.next()) {
+        QString displayText = QString("%1 (%2)")
+        .arg(query.value("name").toString())
+            .arg(query.value("id").toString());
+        doctors.append(displayText);
+    }
+
+    // 如果没有数据，添加默认选项
+    if (doctors.isEmpty()) {
+        doctors << "未指定医生";
+    }
+
+    return doctors;
+}
+
+bool IDatabase::checkTimeConflict(const QString &doctorId, const QDateTime &appointmentTime,
+                                  const QString &excludeAppointmentId)
+{
+    if (doctorId.isEmpty()) {
+        return false;
+    }
+
+    QSqlQuery query;
+    QString queryStr = "SELECT COUNT(*) FROM appointment WHERE doctor_id = ? AND "
+                       "appointment_date = ? AND appointment_time BETWEEN ? AND ? "
+                       "AND status NOT IN ('cancelled', 'no_show')";
+
+    if (!excludeAppointmentId.isEmpty()) {
+        queryStr += " AND id != ?";
+    }
+
+    query.prepare(queryStr);
+    query.addBindValue(doctorId);
+    query.addBindValue(appointmentTime.date());
+
+    // 检查前后30分钟的时间段
+    QTime startTime = appointmentTime.time().addSecs(-30 * 60);
+    QTime endTime = appointmentTime.time().addSecs(30 * 60);
+    query.addBindValue(startTime);
+    query.addBindValue(endTime);
+
+    if (!excludeAppointmentId.isEmpty()) {
+        query.addBindValue(excludeAppointmentId);
+    }
+
+    if (query.exec() && query.next()) {
+        int count = query.value(0).toInt();
+        return count > 0;
+    }
+
+    return false;
+}
