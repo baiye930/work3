@@ -5,7 +5,7 @@
 #include <QSqlTableModel>
 #include <QDebug>
 #include <QSqlQuery>
-
+#include "medicineselectdialog.h"
 PrescriptionEditView::PrescriptionEditView(QWidget *parent, int index)
     : QWidget(parent)
     , ui(new Ui::PrescriptionEditView)
@@ -137,6 +137,8 @@ void PrescriptionEditView::loadPrescriptionDetails()
             ui->tableViewDetails->setColumnWidth(IDatabase::getInstance().prescriptionDetailTabModel->fieldIndex("unit_price"), 80);
             ui->tableViewDetails->setColumnWidth(IDatabase::getInstance().prescriptionDetailTabModel->fieldIndex("total_price"), 80);
             ui->tableViewDetails->setColumnWidth(IDatabase::getInstance().prescriptionDetailTabModel->fieldIndex("dispensing_quantity"), 80);
+
+            updateTotalAmount();
         }
     }
 }
@@ -181,11 +183,7 @@ void PrescriptionEditView::clearError()
     ui->lblError->setVisible(false);
 }
 
-void PrescriptionEditView::updateTotalAmount()
-{
-    // 实际项目中应该从数据库查询，这里简化处理
-    // 主要显示当前处方总金额
-}
+
 
 void PrescriptionEditView::on_btnSave_clicked()
 {
@@ -221,11 +219,7 @@ void PrescriptionEditView::on_btnCancel_clicked()
     emit goPreviousView();
 }
 
-void PrescriptionEditView::on_btnAddMedicine_clicked()
-{
-    // 简化的药品选择，实际项目中应该有弹窗选择药品
-    QMessageBox::information(this, "添加药品", "药品选择功能待实现");
-}
+
 
 void PrescriptionEditView::on_btnDeleteMedicine_clicked()
 {
@@ -268,4 +262,67 @@ void PrescriptionEditView::on_btnSelectPatient_clicked()
 void PrescriptionEditView::on_btnSelectDoctor_clicked()
 {
     QMessageBox::information(this, "选择医生", "医生选择功能待实现");
+}
+
+void PrescriptionEditView::on_btnAddMedicine_clicked()
+{
+    if (currentPrescriptionId.isEmpty()) {
+        QMessageBox::warning(this, "提示", "请先保存处方基本信息");
+        return;
+    }
+
+    // 创建药品选择对话框
+    MedicineSelectDialog dialog(this);
+    if (dialog.exec() == QDialog::Accepted) {
+        QString medicineId = dialog.getSelectedMedicineId();
+        QString medicineName = dialog.getSelectedMedicineName();
+        int quantity = dialog.getQuantity();
+        QString dosage = dialog.getDosage();
+
+        if (medicineId.isEmpty()) {
+            QMessageBox::warning(this, "错误", "未选择药品");
+            return;
+        }
+
+        // 获取药品单价
+        QSqlQuery query;
+        query.prepare("SELECT price FROM medicine WHERE id = ?");
+        query.addBindValue(medicineId);
+
+        if (query.exec() && query.next()) {
+            double unitPrice = query.value(0).toDouble();
+
+            // 添加到处方详情
+            if (IDatabase::getInstance().addPrescriptionDetail(
+                    currentPrescriptionId, medicineId, quantity, dosage)) {
+                // 刷新处方详情列表
+                loadPrescriptionDetails();
+                // 更新总金额显示
+                updateTotalAmount();
+                QMessageBox::information(this, "成功", "药品添加成功");
+            } else {
+                QMessageBox::warning(this, "错误", "添加药品失败");
+            }
+        } else {
+            QMessageBox::warning(this, "错误", "获取药品信息失败");
+        }
+    }
+}
+
+// 新增：更新总金额函数
+void PrescriptionEditView::updateTotalAmount()
+{
+    if (currentPrescriptionId.isEmpty()) {
+        return;
+    }
+
+    QSqlQuery query;
+    query.prepare("SELECT total_amount FROM prescription WHERE id = ?");
+    query.addBindValue(currentPrescriptionId);
+
+    if (query.exec() && query.next()) {
+        double totalAmount = query.value(0).toDouble();
+        // 更新UI显示总金额
+        ui->lblTotalAmount->setText(QString("¥%1").arg(totalAmount, 0, 'f', 2));
+    }
 }

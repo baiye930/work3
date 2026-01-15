@@ -24,6 +24,9 @@ private slots:
     void on_btnSelectPatient_clicked();
     void on_btnSelectDoctor_clicked();
 
+    // 新增：计算总金额
+    void updateTotalAmount();
+
 signals:
     void goPreviousView();
 
@@ -34,7 +37,10 @@ private:
     bool validateInput();
     void showError(const QString &message);
     void clearError();
-    void updateTotalAmount();
+
+    // 新增：添加药品到表格
+    void addMedicineToTable(const QString &medicineId, const QString &medicineName,
+                            int quantity, const QString &dosage, double unitPrice);
 
     Ui::PrescriptionEditView *ui;
     QDataWidgetMapper *dataMapper;
