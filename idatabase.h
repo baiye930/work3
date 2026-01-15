@@ -95,6 +95,41 @@ public:
     QSqlTableModel *medicineTabModel;
     QItemSelectionModel *theMedicineSelection;
 
+
+    // 处方管理方法（新增）
+    bool initPrescriptionModel();
+    int addNewPrescription();
+    bool searchPrescription(const QString &filter);
+    bool deleteCurrentPrescription();
+    bool submitPrescriptionEdit();
+    void revertPrescriptionEdit();
+
+    // 处方详情方法
+    bool initPrescriptionDetailModel(const QString &prescriptionId);
+    bool addPrescriptionDetail(const QString &prescriptionId, const QString &medicineId,
+                               int quantity, const QString &dosage);
+    bool deletePrescriptionDetail(const QString &detailId);
+
+    // 处方状态操作
+    bool dispensePrescription(const QString &prescriptionId);
+    bool processPayment(const QString &prescriptionId, const QString &paymentMethod);
+    bool auditPrescription(const QString &prescriptionId);
+
+    // 统计方法
+    QMap<QString, QVariant> getTodayPrescriptionStats();
+    QMap<QString, QVariant> getMonthPrescriptionStats();
+    int getPendingDispenseCount();
+    int getUnpaidCount();
+
+    // 获取医生列表
+    QList<QString> getDoctorsForCombo();
+
+    // 获取模型指针
+    QSqlTableModel *prescriptionTabModel;
+    QItemSelectionModel *thePrescriptionSelection;
+    QSqlTableModel *prescriptionDetailTabModel;
+    QItemSelectionModel *thePrescriptionDetailSelection;
+
     QSqlTableModel *patientTabModel;
     QItemSelectionModel *thePatientSelection;
 

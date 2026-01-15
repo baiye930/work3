@@ -24,6 +24,7 @@ SOURCES += \
     medicineview.cpp \
     patienteditview.cpp \
     patientview.cpp \
+    prescriptioneditview.cpp \
     prescriptionview.cpp \
     stockdialog.cpp \
     welcomview.cpp
@@ -42,6 +43,7 @@ HEADERS += \
     medicineview.h \
     patienteditview.h \
     patientview.h \
+    prescriptioneditview.h \
     prescriptionview.h \
     stockdialog.h \
     welcomview.h
@@ -59,6 +61,7 @@ FORMS += \
     medicineview.ui \
     patienteditview.ui \
     patientview.ui \
+    prescriptioneditview.ui \
     prescriptionview.ui \
     stockdialog.ui \
     welcomview.ui

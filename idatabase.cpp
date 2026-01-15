@@ -798,3 +798,533 @@ QStringList IDatabase::getDosageForms()
     return QStringList() << "片剂" << "胶囊" << "注射剂" << "颗粒剂" << "口服液"
                          << "软膏" << "栓剂" << "滴眼液" << "喷雾剂" << "贴剂";
 }
+
+// 处方管理方法实现
+bool IDatabase::initPrescriptionModel()
+{
+    prescriptionTabModel = new QSqlTableModel(this, database);
+    prescriptionTabModel->setTable("prescription");
+    prescriptionTabModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
+
+    // 设置表头显示名称
+    prescriptionTabModel->setHeaderData(prescriptionTabModel->fieldIndex("prescription_number"), Qt::Horizontal, "处方号");
+    prescriptionTabModel->setHeaderData(prescriptionTabModel->fieldIndex("patient_id"), Qt::Horizontal, "患者");
+    prescriptionTabModel->setHeaderData(prescriptionTabModel->fieldIndex("doctor_id"), Qt::Horizontal, "医生");
+    prescriptionTabModel->setHeaderData(prescriptionTabModel->fieldIndex("prescription_date"), Qt::Horizontal, "开方日期");
+    prescriptionTabModel->setHeaderData(prescriptionTabModel->fieldIndex("diagnosis"), Qt::Horizontal, "诊断");
+    prescriptionTabModel->setHeaderData(prescriptionTabModel->fieldIndex("total_amount"), Qt::Horizontal, "总金额");
+    prescriptionTabModel->setHeaderData(prescriptionTabModel->fieldIndex("payment_status"), Qt::Horizontal, "支付状态");
+    prescriptionTabModel->setHeaderData(prescriptionTabModel->fieldIndex("dispensing_status"), Qt::Horizontal, "发药状态");
+    prescriptionTabModel->setHeaderData(prescriptionTabModel->fieldIndex("status"), Qt::Horizontal, "状态");
+
+    // 按开方日期倒序排序（最新在前）
+    prescriptionTabModel->setSort(prescriptionTabModel->fieldIndex("prescription_date"), Qt::DescendingOrder);
+
+    if (!prescriptionTabModel->select()) {
+        qDebug() << "初始化处方模型失败：" << prescriptionTabModel->lastError();
+        return false;
+    }
+
+    thePrescriptionSelection = new QItemSelectionModel(prescriptionTabModel);
+    qDebug() << "处方模型初始化成功，记录数：" << prescriptionTabModel->rowCount();
+    return true;
+}
+
+int IDatabase::addNewPrescription()
+{
+    // 生成处方号（规则：RX + 年月日 + 4位随机数）
+    QString dateStr = QDate::currentDate().toString("yyyyMMdd");
+    QString randomStr = QString::number(QRandomGenerator::global()->bounded(1000, 9999));
+    QString prescriptionNumber = "RX" + dateStr + randomStr;
+
+    prescriptionTabModel->insertRow(prescriptionTabModel->rowCount(), QModelIndex());
+
+    QModelIndex curIndex = prescriptionTabModel->index(prescriptionTabModel->rowCount() - 1, 0);
+    int curRecNo = curIndex.row();
+    QSqlRecord curRec = prescriptionTabModel->record(curRecNo);
+
+    // 设置默认值
+    curRec.setValue("id", QUuid::createUuid().toString(QUuid::WithoutBraces));
+    curRec.setValue("prescription_number", prescriptionNumber);
+    curRec.setValue("prescription_date", QDateTime::currentDateTime());
+    curRec.setValue("payment_status", "unpaid");
+    curRec.setValue("dispensing_status", "pending");
+    curRec.setValue("total_amount", 0.0);
+    curRec.setValue("created_time", QDateTime::currentDateTime());
+
+    prescriptionTabModel->setRecord(curRecNo, curRec);
+
+    qDebug() << "新增处方，ID：" << curRec.value("id").toString()
+             << "，处方号：" << curRec.value("prescription_number").toString();
+    return curRecNo;
+}
+
+bool IDatabase::searchPrescription(const QString &filter)
+{
+    if (filter.isEmpty()) {
+        prescriptionTabModel->setFilter("");
+    } else {
+        // 构建复杂的查询条件，关联患者和医生表
+        QString whereClause = QString(
+                                  "prescription_number LIKE '%%1%' OR "
+                                  "id IN (SELECT id FROM prescription WHERE "
+                                  "patient_id IN (SELECT ID FROM patient WHERE name LIKE '%%1%') OR "
+                                  "doctor_id IN (SELECT id FROM doctor WHERE name LIKE '%%1%'))")
+                                  .arg(filter);
+        prescriptionTabModel->setFilter(whereClause);
+    }
+
+    bool success = prescriptionTabModel->select();
+    if (!success) {
+        qDebug() << "搜索处方失败：" << prescriptionTabModel->lastError();
+    }
+    return success;
+}
+
+bool IDatabase::deleteCurrentPrescription()
+{
+    QModelIndex curIndex = thePrescriptionSelection->currentIndex();
+    if (!curIndex.isValid()) {
+        qDebug() << "删除失败：未选择处方";
+        return false;
+    }
+
+    // 获取处方信息
+    QString prescriptionId = prescriptionTabModel->record(curIndex.row()).value("id").toString();
+    QString prescriptionNumber = prescriptionTabModel->record(curIndex.row()).value("prescription_number").toString();
+    QString dispensingStatus = prescriptionTabModel->record(curIndex.row()).value("dispensing_status").toString();
+    QString paymentStatus = prescriptionTabModel->record(curIndex.row()).value("payment_status").toString();
+
+    // 检查处方状态
+    if (dispensingStatus == "dispensed") {
+        qDebug() << "无法删除处方：" << prescriptionNumber << "，已发药";
+        return false;
+    }
+
+    if (paymentStatus == "paid") {
+        qDebug() << "无法删除处方：" << prescriptionNumber << "，已收费";
+        return false;
+    }
+
+    // 先删除处方详情
+    QSqlQuery query;
+    query.prepare("DELETE FROM prescription_detail WHERE prescription_id = ?");
+    query.addBindValue(prescriptionId);
+    if (!query.exec()) {
+        qDebug() << "删除处方详情失败：" << query.lastError();
+        return false;
+    }
+
+    // 再删除处方
+    if (prescriptionTabModel->removeRow(curIndex.row())) {
+        bool success = prescriptionTabModel->submitAll();
+        if (success) {
+            prescriptionTabModel->select(); // 刷新数据
+            qDebug() << "删除处方成功：" << prescriptionNumber;
+        } else {
+            qDebug() << "删除处方失败：" << prescriptionTabModel->lastError();
+        }
+        return success;
+    }
+
+    return false;
+}
+
+bool IDatabase::submitPrescriptionEdit()
+{
+    bool success = prescriptionTabModel->submitAll();
+    if (!success) {
+        qDebug() << "提交处方编辑失败：" << prescriptionTabModel->lastError();
+    }
+    return success;
+}
+
+void IDatabase::revertPrescriptionEdit()
+{
+    prescriptionTabModel->revertAll();
+    qDebug() << "撤销处方编辑";
+}
+
+bool IDatabase::initPrescriptionDetailModel(const QString &prescriptionId)
+{
+    prescriptionDetailTabModel = new QSqlTableModel(this, database);
+    prescriptionDetailTabModel->setTable("prescription_detail");
+    prescriptionDetailTabModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
+    prescriptionDetailTabModel->setFilter(QString("prescription_id = '%1'").arg(prescriptionId));
+
+    // 设置表头显示名称
+    prescriptionDetailTabModel->setHeaderData(prescriptionDetailTabModel->fieldIndex("medicine_id"), Qt::Horizontal, "药品");
+    prescriptionDetailTabModel->setHeaderData(prescriptionDetailTabModel->fieldIndex("quantity"), Qt::Horizontal, "数量");
+    prescriptionDetailTabModel->setHeaderData(prescriptionDetailTabModel->fieldIndex("dosage"), Qt::Horizontal, "用法用量");
+    prescriptionDetailTabModel->setHeaderData(prescriptionDetailTabModel->fieldIndex("unit_price"), Qt::Horizontal, "单价");
+    prescriptionDetailTabModel->setHeaderData(prescriptionDetailTabModel->fieldIndex("total_price"), Qt::Horizontal, "小计");
+    prescriptionDetailTabModel->setHeaderData(prescriptionDetailTabModel->fieldIndex("dispensing_quantity"), Qt::Horizontal, "已发数量");
+    prescriptionDetailTabModel->setHeaderData(prescriptionDetailTabModel->fieldIndex("dispensing_status"), Qt::Horizontal, "发药状态");
+
+    if (!prescriptionDetailTabModel->select()) {
+        qDebug() << "初始化处方详情模型失败：" << prescriptionDetailTabModel->lastError();
+        return false;
+    }
+
+    thePrescriptionDetailSelection = new QItemSelectionModel(prescriptionDetailTabModel);
+    qDebug() << "处方详情模型初始化成功，记录数：" << prescriptionDetailTabModel->rowCount();
+    return true;
+}
+
+bool IDatabase::addPrescriptionDetail(const QString &prescriptionId, const QString &medicineId,
+                                      int quantity, const QString &dosage)
+{
+    if (quantity <= 0) {
+        qDebug() << "药品数量必须大于0";
+        return false;
+    }
+
+    // 获取药品信息
+    QSqlQuery query;
+    query.prepare("SELECT name, price, stock FROM medicine WHERE id = ?");
+    query.addBindValue(medicineId);
+
+    if (!query.exec() || !query.next()) {
+        qDebug() << "获取药品信息失败";
+        return false;
+    }
+
+    QString medicineName = query.value("name").toString();
+    double unitPrice = query.value("price").toDouble();
+    int stock = query.value("stock").toInt();
+    double totalPrice = unitPrice * quantity;
+
+    // 检查库存
+    if (stock < quantity) {
+        qDebug() << "药品库存不足：" << medicineName << "，库存：" << stock << "，需求：" << quantity;
+        return false;
+    }
+
+    // 插入处方详情
+    QString detailId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    query.prepare("INSERT INTO prescription_detail (id, prescription_id, medicine_id, quantity, dosage, unit_price, total_price) "
+                  "VALUES (?, ?, ?, ?, ?, ?, ?)");
+    query.addBindValue(detailId);
+    query.addBindValue(prescriptionId);
+    query.addBindValue(medicineId);
+    query.addBindValue(quantity);
+    query.addBindValue(dosage);
+    query.addBindValue(unitPrice);
+    query.addBindValue(totalPrice);
+
+    if (!query.exec()) {
+        qDebug() << "添加处方详情失败：" << query.lastError();
+        return false;
+    }
+
+    // 更新处方总金额
+    query.prepare("UPDATE prescription SET total_amount = total_amount + ? WHERE id = ?");
+    query.addBindValue(totalPrice);
+    query.addBindValue(prescriptionId);
+
+    if (!query.exec()) {
+        qDebug() << "更新处方总金额失败：" << query.lastError();
+        return false;
+    }
+
+    qDebug() << "添加处方详情成功：" << medicineName << "，数量：" << quantity
+             << "，金额：" << totalPrice;
+    return true;
+}
+
+bool IDatabase::deletePrescriptionDetail(const QString &detailId)
+{
+    // 先获取详情信息
+    QSqlQuery query;
+    query.prepare("SELECT prescription_id, total_price FROM prescription_detail WHERE id = ?");
+    query.addBindValue(detailId);
+
+    if (!query.exec() || !query.next()) {
+        qDebug() << "获取处方详情失败";
+        return false;
+    }
+
+    QString prescriptionId = query.value("prescription_id").toString();
+    double totalPrice = query.value("total_price").toDouble();
+
+    // 删除详情
+    query.prepare("DELETE FROM prescription_detail WHERE id = ?");
+    query.addBindValue(detailId);
+
+    if (!query.exec()) {
+        qDebug() << "删除处方详情失败：" << query.lastError();
+        return false;
+    }
+
+    // 更新处方总金额
+    query.prepare("UPDATE prescription SET total_amount = total_amount - ? WHERE id = ?");
+    query.addBindValue(totalPrice);
+    query.addBindValue(prescriptionId);
+
+    if (!query.exec()) {
+        qDebug() << "更新处方总金额失败：" << query.lastError();
+        return false;
+    }
+
+    qDebug() << "删除处方详情成功，ID：" << detailId;
+    return true;
+}
+
+bool IDatabase::dispensePrescription(const QString &prescriptionId)
+{
+    // 检查处方状态
+    QSqlQuery query;
+    query.prepare("SELECT dispensing_status, total_amount FROM prescription WHERE id = ?");
+    query.addBindValue(prescriptionId);
+
+    if (!query.exec() || !query.next()) {
+        qDebug() << "获取处方信息失败";
+        return false;
+    }
+
+    QString dispensingStatus = query.value("dispensing_status").toString();
+    double totalAmount = query.value("total_amount").toDouble();
+
+    if (dispensingStatus == "dispensed") {
+        qDebug() << "处方已发药";
+        return false;
+    }
+
+    if (totalAmount <= 0) {
+        qDebug() << "处方金额为0，无需发药";
+        return false;
+    }
+
+    // 获取处方详情
+    query.prepare("SELECT id, medicine_id, quantity FROM prescription_detail WHERE prescription_id = ?");
+    query.addBindValue(prescriptionId);
+
+    if (!query.exec()) {
+        qDebug() << "获取处方详情失败";
+        return false;
+    }
+
+    bool allSuccess = true;
+    QStringList errors;
+
+    while (query.next()) {
+        QString detailId = query.value("id").toString();
+        QString medicineId = query.value("medicine_id").toString();
+        int quantity = query.value("quantity").toInt();
+
+        // 检查库存并发药
+        QSqlQuery medicineQuery;
+        medicineQuery.prepare("SELECT stock, name FROM medicine WHERE id = ?");
+        medicineQuery.addBindValue(medicineId);
+
+        if (medicineQuery.exec() && medicineQuery.next()) {
+            int stock = medicineQuery.value("stock").toInt();
+            QString medicineName = medicineQuery.value("name").toString();
+
+            if (stock >= quantity) {
+                // 更新药品库存
+                medicineQuery.prepare("UPDATE medicine SET stock = stock - ? WHERE id = ?");
+                medicineQuery.addBindValue(quantity);
+                medicineQuery.addBindValue(medicineId);
+
+                if (!medicineQuery.exec()) {
+                    errors.append(QString("%1: 更新库存失败").arg(medicineName));
+                    allSuccess = false;
+                    continue;
+                }
+
+                // 更新处方详情发药状态
+                medicineQuery.prepare("UPDATE prescription_detail SET dispensing_quantity = ?, dispensing_time = ?, dispensing_by = ? WHERE id = ?");
+                medicineQuery.addBindValue(quantity);
+                medicineQuery.addBindValue(QDateTime::currentDateTime());
+                medicineQuery.addBindValue("system");
+                medicineQuery.addBindValue(detailId);
+
+                if (!medicineQuery.exec()) {
+                    errors.append(QString("%1: 更新发药状态失败").arg(medicineName));
+                    allSuccess = false;
+                }
+            } else {
+                errors.append(QString("%1: 库存不足（库存:%2, 需求:%3）").arg(medicineName).arg(stock).arg(quantity));
+                allSuccess = false;
+            }
+        }
+    }
+
+    if (allSuccess) {
+        // 更新处方发药状态
+        query.prepare("UPDATE prescription SET dispensing_status = 'dispensed' WHERE id = ?");
+        query.addBindValue(prescriptionId);
+
+        if (!query.exec()) {
+            qDebug() << "更新处方发药状态失败：" << query.lastError();
+            return false;
+        }
+
+        qDebug() << "处方发药成功：" << prescriptionId;
+        return true;
+    } else {
+        qDebug() << "发药失败，错误：" << errors.join(", ");
+        return false;
+    }
+}
+
+bool IDatabase::processPayment(const QString &prescriptionId, const QString &paymentMethod)
+{
+    // 检查处方状态
+    QSqlQuery query;
+    query.prepare("SELECT payment_status, total_amount, dispensing_status FROM prescription WHERE id = ?");
+    query.addBindValue(prescriptionId);
+
+    if (!query.exec() || !query.next()) {
+        qDebug() << "获取处方信息失败";
+        return false;
+    }
+
+    QString paymentStatus = query.value("payment_status").toString();
+    double totalAmount = query.value("total_amount").toDouble();
+    QString dispensingStatus = query.value("dispensing_status").toString();
+
+    if (paymentStatus == "paid") {
+        qDebug() << "处方已收费";
+        return false;
+    }
+
+    if (totalAmount <= 0) {
+        qDebug() << "处方金额为0，无需收费";
+        return false;
+    }
+
+    // 更新处方支付状态
+    query.prepare("UPDATE prescription SET payment_status = 'paid', payment_method = ? WHERE id = ?");
+    query.addBindValue(paymentMethod);
+    query.addBindValue(prescriptionId);
+
+    if (!query.exec()) {
+        qDebug() << "更新处方支付状态失败：" << query.lastError();
+        return false;
+    }
+
+    // 创建费用记录
+    QString feeId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    query.prepare("INSERT INTO fee (id, patient_id, prescription_id, fee_type, item_name, quantity, unit_price, total_amount, payment_method, payment_time, status) "
+                  "SELECT ?, patient_id, ?, 'medicine', '处方费', 1, total_amount, total_amount, ?, ?, 'paid' "
+                  "FROM prescription WHERE id = ?");
+    query.addBindValue(feeId);
+    query.addBindValue(prescriptionId);
+    query.addBindValue(paymentMethod);
+    query.addBindValue(QDateTime::currentDateTime());
+    query.addBindValue(prescriptionId);
+
+    if (!query.exec()) {
+        qDebug() << "创建费用记录失败：" << query.lastError();
+        return false;
+    }
+
+    qDebug() << "处方收费成功：" << prescriptionId << "，金额：" << totalAmount;
+    return true;
+}
+
+bool IDatabase::auditPrescription(const QString &prescriptionId)
+{
+    QSqlQuery query;
+    query.prepare("UPDATE prescription SET status = 'audited' WHERE id = ?");
+    query.addBindValue(prescriptionId);
+
+    if (!query.exec()) {
+        qDebug() << "审核处方失败：" << query.lastError();
+        return false;
+    }
+
+    qDebug() << "处方审核成功：" << prescriptionId;
+    return true;
+}
+
+QMap<QString, QVariant> IDatabase::getTodayPrescriptionStats()
+{
+    QMap<QString, QVariant> stats;
+
+    QSqlQuery query;
+    query.prepare("SELECT COUNT(*) as count, SUM(total_amount) as amount FROM prescription WHERE DATE(prescription_date) = DATE('now')");
+
+    if (query.exec() && query.next()) {
+        stats["today_count"] = query.value("count").toInt();
+        stats["today_amount"] = query.value("amount").toDouble();
+    } else {
+        stats["today_count"] = 0;
+        stats["today_amount"] = 0.0;
+    }
+
+    return stats;
+}
+
+QMap<QString, QVariant> IDatabase::getMonthPrescriptionStats()
+{
+    QMap<QString, QVariant> stats;
+
+    QSqlQuery query;
+    query.prepare("SELECT COUNT(*) as count, SUM(total_amount) as amount FROM prescription WHERE strftime('%Y-%m', prescription_date) = strftime('%Y-%m', 'now')");
+
+    if (query.exec() && query.next()) {
+        stats["month_count"] = query.value("count").toInt();
+        stats["month_amount"] = query.value("amount").toDouble();
+    } else {
+        stats["month_count"] = 0;
+        stats["month_amount"] = 0.0;
+    }
+
+    return stats;
+}
+
+int IDatabase::getPendingDispenseCount()
+{
+    int count = 0;
+    QSqlQuery query("SELECT COUNT(*) FROM prescription WHERE dispensing_status = 'pending' AND payment_status = 'paid'");
+
+    if (query.exec() && query.next()) {
+        count = query.value(0).toInt();
+    }
+
+    return count;
+}
+
+int IDatabase::getUnpaidCount()
+{
+    int count = 0;
+    QSqlQuery query("SELECT COUNT(*) FROM prescription WHERE payment_status = 'unpaid'");
+
+    if (query.exec() && query.next()) {
+        count = query.value(0).toInt();
+    }
+
+    return count;
+}
+
+QList<QString> IDatabase::getDoctorsForCombo()
+{
+    QList<QString> doctors;
+
+    // 如果doctor表不存在，返回测试数据
+    QSqlQuery checkTable("SELECT name FROM sqlite_master WHERE type='table' AND name='doctor'");
+    if (!checkTable.next()) {
+        // 表不存在，返回模拟数据
+        doctors << "张医生 (d001)" << "李医生 (d002)" << "王医生 (d003)";
+        return doctors;
+    }
+
+    QSqlQuery query("SELECT id, name FROM doctor WHERE status = 'active' ORDER BY name");
+
+    while (query.next()) {
+        QString displayText = QString("%1 (%2)")
+        .arg(query.value("name").toString())
+            .arg(query.value("id").toString());
+        doctors.append(displayText);
+    }
+
+    // 如果没有数据，添加默认选项
+    if (doctors.isEmpty()) {
+        doctors << "未指定医生";
+    }
+
+    return doctors;
+}
