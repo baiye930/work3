@@ -12,11 +12,12 @@
 #include "consult_recordview.h"
 #include "medicineview.h"
 #include "prescriptionview.h"
-#include "doctoreditview.h"  // 确保包含这个头文件
+#include "doctoreditview.h"
 #include "departmenteditview.h"
 #include "medicineeditview.h"
 #include "prescriptioneditview.h"
 #include "appointmenteditview.h"
+#include "consult_recordeditview.h"  // 确保包含这个头文件
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -44,17 +45,16 @@ public slots:
     void gomedicineview();
     void goconsult_recordview();
     void goappointmentview();
-    void goDoctorEditView(int rowNo);  // 添加医生编辑视图槽函数
-   void goDepartmentEditView(int rowNo);  // 添加科室编辑视图槽函数
- void goMedicineEditView(int rowNo);  // 添加药品编辑视图槽函数
-   void goPrescriptionEditView(int rowNo);  // 添加处方编辑视图槽函数
-void goAppointmentEditView(int rowNo);
+    void goDoctorEditView(int rowNo);
+    void goDepartmentEditView(int rowNo);
+    void goMedicineEditView(int rowNo);
+    void goPrescriptionEditView(int rowNo);
+    void goAppointmentEditView(int rowNo);
+    void goConsultRecordEditView(int rowNo);  // 添加这个槽函数
 
 private slots:
     void on_stackedWidget_currentChanged(int arg1);
-
     void on_btBack_clicked();
-
     void on_btLogout_clicked();
 
 private:
@@ -72,11 +72,12 @@ private:
     consult_recordview *consult_recordView;
     medicineview *medicineView;
     Prescriptionview *prescriptionView;
-    DoctoreditView *doctorEditView;  // 添加医生编辑视图指针
-       DepartmentEditView *departmentEditView;  // 添加科室编辑视图指针
-   MedicineEditView *medicineEditView;  // 添加药品编辑视图指针
-         PrescriptionEditView *prescriptionEditView;  // 添加处方编辑视图指针
-AppointmentEditView *appointmentEditView;  // 添加指针
+    DoctoreditView *doctorEditView;
+    DepartmentEditView *departmentEditView;
+    MedicineEditView *medicineEditView;
+    PrescriptionEditView *prescriptionEditView;
+    AppointmentEditView *appointmentEditView;
+    ConsultRecordEditView *consultRecordEditView;  // 使用正确的类名
 };
 
 #endif // MASTRVIEW_H

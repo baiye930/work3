@@ -12,6 +12,7 @@ CONFIG += c++17
 SOURCES += \
     appointmenteditview.cpp \
     appointmentview.cpp \
+    consult_recordeditview.cpp \
     consult_recordview.cpp \
     departmenteditview.cpp \
     departmentview.cpp \
@@ -34,6 +35,7 @@ SOURCES += \
 HEADERS += \
     appointmenteditview.h \
     appointmentview.h \
+    consult_recordeditview.h \
     consult_recordview.h \
     departmenteditview.h \
     departmentview.h \
@@ -55,6 +57,7 @@ HEADERS += \
 FORMS += \
     appointmenteditview.ui \
     appointmentview.ui \
+    consult_recordeditview.ui \
     consult_recordview.ui \
     departmenteditview.ui \
     departmentview.ui \

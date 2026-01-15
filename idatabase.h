@@ -166,7 +166,23 @@ public:
     // 预约时间冲突检查
     bool checkTimeConflict(const QString &doctorId, const QDateTime &appointmentTime,
                            const QString &excludeAppointmentId = "");
+    // 就诊记录管理方法（新增）
+    bool initConsultRecordModel();
+    int addNewConsultRecord();
+    bool searchConsultRecord(const QString &filter);
+    bool deleteCurrentConsultRecord();
+    bool submitConsultRecordEdit();
+    void revertConsultRecordEdit();
 
+    // 获取统计信息
+    int getTodayConsultCount();
+    int getMonthConsultCount();
+    QMap<QString, QVariant> getConsultSummaryStats();
+    QList<QString> getCommonDiagnoses(int limit = 5);
+
+    // 获取模型指针
+    QSqlTableModel *consultRecordTabModel;
+    QItemSelectionModel *theConsultRecordSelection;
 };
 
 #endif

@@ -27,6 +27,7 @@ MastrView::MastrView(QWidget *parent)
     , medicineEditView(nullptr)
     , prescriptionEditView(nullptr)  // 初始化处方编辑视图指针
     ,appointmentEditView(nullptr)
+ , consultRecordEditView(nullptr)
 {
     ui->setupUi(this);
 
@@ -66,6 +67,8 @@ void MastrView::goWelcomView()
     connect(welcomeView, SIGNAL(goappointmentview()), this, SLOT(goappointmentview()));
     connect(appointmentView, SIGNAL(goAppointmentEditView(int)),
             this, SLOT(goAppointmentEditView(int)));
+    connect(consult_recordView, SIGNAL(goConsultRecordEditView(int)),
+            this, SLOT(goConsultRecordEditView(int)));
 }
 
 void MastrView::goDoctorView()
@@ -120,16 +123,6 @@ void MastrView::goPreviousView()
     }
 }
 
-
-
-
-
-void MastrView::goconsult_recordview()
-{
-    qDebug() << "goconsult_recordview";
-    consult_recordView = new consult_recordview(this);
-    pushWidgetToStackView(consult_recordView);
-}
 
 
 
@@ -246,5 +239,25 @@ void MastrView::goAppointmentEditView(int rowNo)
     pushWidgetToStackView(appointmentEditView);
 
     connect(appointmentEditView, SIGNAL(goPreviousView()),
+            this, SLOT(goPreviousView()));
+}
+void MastrView::goconsult_recordview()
+{
+    qDebug() << "goconsult_recordview";
+    consult_recordView = new consult_recordview(this);
+    pushWidgetToStackView(consult_recordView);
+
+    // 连接信号，跳转到就诊记录编辑界面
+    connect(consult_recordView, SIGNAL(goConsultRecordEditView(int)),
+            this, SLOT(goConsultRecordEditView(int)));
+}
+
+void MastrView::goConsultRecordEditView(int rowNo)
+{
+    qDebug() << "goConsultRecordEditView, row:" << rowNo;
+    consultRecordEditView = new ConsultRecordEditView(this, rowNo);  // 使用正确的类名
+    pushWidgetToStackView(consultRecordEditView);
+
+    connect(consultRecordEditView, SIGNAL(goPreviousView()),
             this, SLOT(goPreviousView()));
 }

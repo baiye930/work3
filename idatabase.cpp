@@ -1669,3 +1669,222 @@ bool IDatabase::checkTimeConflict(const QString &doctorId, const QDateTime &appo
 
     return false;
 }
+// idatabase.cpp - 在文件末尾添加以下方法实现
+
+// 就诊记录管理方法实现
+bool IDatabase::initConsultRecordModel()
+{
+    consultRecordTabModel = new QSqlTableModel(this, database);
+    consultRecordTabModel->setTable("consult_record");
+    consultRecordTabModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
+
+    // 设置表头显示名称
+    consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("patient_id"), Qt::Horizontal, "患者");
+    consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("doctor_id"), Qt::Horizontal, "医生");
+    consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("consult_date"), Qt::Horizontal, "就诊日期");
+    consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("department_id"), Qt::Horizontal, "科室");
+    consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("diagnosis"), Qt::Horizontal, "诊断");
+    consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("symptoms"), Qt::Horizontal, "症状");
+    consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("treatment"), Qt::Horizontal, "治疗方案");
+    consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("prescription_id"), Qt::Horizontal, "处方");
+    consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("consult_fee"), Qt::Horizontal, "诊费");
+    consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("notes"), Qt::Horizontal, "备注");
+    consultRecordTabModel->setHeaderData(consultRecordTabModel->fieldIndex("next_visit_date"), Qt::Horizontal, "复诊日期");
+
+    // 按就诊日期倒序排序（最新的在前）
+    consultRecordTabModel->setSort(consultRecordTabModel->fieldIndex("consult_date"), Qt::DescendingOrder);
+
+    if (!consultRecordTabModel->select()) {
+        qDebug() << "初始化就诊记录模型失败：" << consultRecordTabModel->lastError();
+        return false;
+    }
+
+    theConsultRecordSelection = new QItemSelectionModel(consultRecordTabModel);
+    qDebug() << "就诊记录模型初始化成功，记录数：" << consultRecordTabModel->rowCount();
+    return true;
+}
+
+int IDatabase::addNewConsultRecord()
+{
+    consultRecordTabModel->insertRow(consultRecordTabModel->rowCount(), QModelIndex());
+
+    QModelIndex curIndex = consultRecordTabModel->index(consultRecordTabModel->rowCount() - 1, 0);
+    int curRecNo = curIndex.row();
+    QSqlRecord curRec = consultRecordTabModel->record(curRecNo);
+
+    // 设置默认值
+    curRec.setValue("id", QUuid::createUuid().toString(QUuid::WithoutBraces));
+    curRec.setValue("consult_date", QDateTime::currentDateTime());
+    curRec.setValue("consult_fee", 0.0);
+    curRec.setValue("created_time", QDateTime::currentDateTime());
+    curRec.setValue("status", "active");
+
+    consultRecordTabModel->setRecord(curRecNo, curRec);
+
+    qDebug() << "新增就诊记录，ID：" << curRec.value("id").toString();
+    return curRecNo;
+}
+
+bool IDatabase::searchConsultRecord(const QString &filter)
+{
+    if (filter.isEmpty()) {
+        consultRecordTabModel->setFilter("");
+    } else {
+        // 构建复杂的查询条件，关联患者和医生表
+        QString whereClause = QString(
+                                  "diagnosis LIKE '%%1%' OR symptoms LIKE '%%1%' OR treatment LIKE '%%1%' OR "
+                                  "id IN (SELECT id FROM consult_record WHERE "
+                                  "patient_id IN (SELECT ID FROM patient WHERE name LIKE '%%1%') OR "
+                                  "doctor_id IN (SELECT id FROM doctor WHERE name LIKE '%%1%'))")
+                                  .arg(filter);
+        consultRecordTabModel->setFilter(whereClause);
+    }
+
+    bool success = consultRecordTabModel->select();
+    if (!success) {
+        qDebug() << "搜索就诊记录失败：" << consultRecordTabModel->lastError();
+    }
+    return success;
+}
+
+bool IDatabase::deleteCurrentConsultRecord()
+{
+    QModelIndex curIndex = theConsultRecordSelection->currentIndex();
+    if (!curIndex.isValid()) {
+        qDebug() << "删除失败：未选择就诊记录";
+        return false;
+    }
+
+    // 获取就诊记录信息
+    QString recordId = consultRecordTabModel->record(curIndex.row()).value("id").toString();
+    QString patientName = consultRecordTabModel->record(curIndex.row()).value("patient_id").toString();
+
+    // 检查是否有关联的处方
+    QSqlQuery query;
+    query.prepare("SELECT COUNT(*) FROM prescription WHERE consult_record_id = ?");
+    query.addBindValue(recordId);
+
+    if (query.exec() && query.next()) {
+        int prescriptionCount = query.value(0).toInt();
+        if (prescriptionCount > 0) {
+            qDebug() << "无法删除就诊记录，有处方关联";
+            return false;
+        }
+    }
+
+    // 执行删除
+    if (consultRecordTabModel->removeRow(curIndex.row())) {
+        bool success = consultRecordTabModel->submitAll();
+        if (success) {
+            consultRecordTabModel->select(); // 刷新数据
+            qDebug() << "删除就诊记录成功，患者：" << patientName;
+        } else {
+            qDebug() << "删除就诊记录失败：" << consultRecordTabModel->lastError();
+        }
+        return success;
+    }
+
+    return false;
+}
+
+bool IDatabase::submitConsultRecordEdit()
+{
+    bool success = consultRecordTabModel->submitAll();
+    if (!success) {
+        qDebug() << "提交就诊记录编辑失败：" << consultRecordTabModel->lastError();
+    }
+    return success;
+}
+
+void IDatabase::revertConsultRecordEdit()
+{
+    consultRecordTabModel->revertAll();
+    qDebug() << "撤销就诊记录编辑";
+}
+
+int IDatabase::getTodayConsultCount()
+{
+    int count = 0;
+    QSqlQuery query;
+    query.prepare("SELECT COUNT(*) FROM consult_record WHERE DATE(consult_date) = DATE('now')");
+
+    if (query.exec() && query.next()) {
+        count = query.value(0).toInt();
+    }
+
+    return count;
+}
+
+int IDatabase::getMonthConsultCount()
+{
+    int count = 0;
+    QSqlQuery query;
+    query.prepare("SELECT COUNT(*) FROM consult_record WHERE strftime('%Y-%m', consult_date) = strftime('%Y-%m', 'now')");
+
+    if (query.exec() && query.next()) {
+        count = query.value(0).toInt();
+    }
+
+    return count;
+}
+
+QMap<QString, QVariant> IDatabase::getConsultSummaryStats()
+{
+    QMap<QString, QVariant> stats;
+
+    // 今日诊费总额
+    QSqlQuery todayFeeQuery;
+    todayFeeQuery.prepare("SELECT SUM(consult_fee) as total_fee FROM consult_record WHERE DATE(consult_date) = DATE('now')");
+    if (todayFeeQuery.exec() && todayFeeQuery.next()) {
+        stats["today_fee"] = todayFeeQuery.value("total_fee").toDouble();
+    }
+
+    // 本月诊费总额
+    QSqlQuery monthFeeQuery;
+    monthFeeQuery.prepare("SELECT SUM(consult_fee) as total_fee FROM consult_record WHERE strftime('%Y-%m', consult_date) = strftime('%Y-%m', 'now')");
+    if (monthFeeQuery.exec() && monthFeeQuery.next()) {
+        stats["month_fee"] = monthFeeQuery.value("total_fee").toDouble();
+    }
+
+    // 各科室就诊量
+    QSqlQuery deptQuery;
+    deptQuery.prepare("SELECT d.name as department, COUNT(*) as count "
+                      "FROM consult_record cr "
+                      "LEFT JOIN department d ON cr.department_id = d.id "
+                      "WHERE DATE(cr.consult_date) = DATE('now') "
+                      "GROUP BY cr.department_id "
+                      "ORDER BY count DESC LIMIT 5");
+
+    QStringList topDepartments;
+    if (deptQuery.exec()) {
+        while (deptQuery.next()) {
+            topDepartments.append(QString("%1: %2人次").arg(deptQuery.value("department").toString()).arg(deptQuery.value("count").toInt()));
+        }
+        stats["top_departments"] = topDepartments.join(" | ");
+    }
+
+    return stats;
+}
+
+QList<QString> IDatabase::getCommonDiagnoses(int limit)
+{
+    QList<QString> commonDiagnoses;
+    QSqlQuery query;
+    query.prepare("SELECT diagnosis, COUNT(*) as count FROM consult_record "
+                  "WHERE diagnosis IS NOT NULL AND diagnosis != '' "
+                  "GROUP BY diagnosis ORDER BY count DESC LIMIT ?");
+    query.addBindValue(limit);
+
+    if (query.exec()) {
+        while (query.next()) {
+            commonDiagnoses.append(QString("%1 (%2次)").arg(query.value("diagnosis").toString()).arg(query.value("count").toInt()));
+        }
+    }
+
+    // 如果没有数据，添加默认信息
+    if (commonDiagnoses.isEmpty()) {
+        commonDiagnoses.append("暂无数据");
+    }
+
+    return commonDiagnoses;
+}
