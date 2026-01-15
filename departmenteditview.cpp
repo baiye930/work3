@@ -5,16 +5,12 @@
 #include <QSqlTableModel>
 #include <QDebug>
 
-// 如果ui文件不存在，需要创建
-#ifndef DEPARTMENTEDITVIEW_H
-#include "ui_departmenteditview.h"
-#endif
-
 DepartmentEditView::DepartmentEditView(QWidget *parent, int index)
     : QWidget(parent)
     , ui(new Ui::DepartmentEditView)
     , dataMapper(nullptr)
     , isNewDepartment(false)
+    , currentDepartmentId("")
 {
     ui->setupUi(this);
     initUI();
@@ -24,6 +20,8 @@ DepartmentEditView::DepartmentEditView(QWidget *parent, int index)
     if (index >= 0 && index < tabModel->rowCount()) {
         QSqlRecord rec = tabModel->record(index);
         QString deptName = rec.value("name").toString();
+        currentDepartmentId = rec.value("id").toString();  // 获取ID
+
         if (deptName.isEmpty()) {
             isNewDepartment = true;
         }
@@ -44,6 +42,7 @@ DepartmentEditView::DepartmentEditView(QWidget *parent, int index)
     dataMapper->setSubmitPolicy(QDataWidgetMapper::AutoSubmit);
 
     // 添加映射
+    dataMapper->addMapping(ui->txtID, tabModel->fieldIndex("id"));  // 映射ID字段
     dataMapper->addMapping(ui->txtName, tabModel->fieldIndex("name"));
     dataMapper->addMapping(ui->txtLocation, tabModel->fieldIndex("location"));
     dataMapper->addMapping(ui->txtPhone, tabModel->fieldIndex("phone"));
@@ -57,6 +56,9 @@ DepartmentEditView::DepartmentEditView(QWidget *parent, int index)
         dataMapper->setCurrentIndex(tabModel->rowCount() - 1);
         ui->cmbStatus->setCurrentText("active");
         ui->dateEstablished->setDate(QDate::currentDate());
+
+        // 如果是新增，显示生成的ID
+        loadDepartmentData();
     } else {
         dataMapper->setCurrentIndex(index);
 
@@ -68,6 +70,9 @@ DepartmentEditView::DepartmentEditView(QWidget *parent, int index)
             int statusIndex = ui->cmbStatus->findText(status);
             if (statusIndex >= 0) ui->cmbStatus->setCurrentIndex(statusIndex);
         }
+
+        // 加载当前科室数据
+        loadDepartmentData();
     }
 
     // 连接信号槽
@@ -98,8 +103,32 @@ void DepartmentEditView::initUI()
     ui->spinBedCount->setMinimum(0);
     ui->spinBedCount->setMaximum(1000);
 
+    // 设置ID字段为只读
+    ui->txtID->setReadOnly(true);
+
     // 隐藏错误标签
     clearError();
+}
+
+void DepartmentEditView::loadDepartmentData()
+{
+    QSqlTableModel *tabModel = IDatabase::getInstance().departmentTabModel;
+    int currentRow = dataMapper->currentIndex();
+
+    if (currentRow >= 0 && currentRow < tabModel->rowCount()) {
+        QSqlRecord rec = tabModel->record(currentRow);
+        QString id = rec.value("id").toString();
+        QString status = rec.value("status").toString();
+
+        // 显示ID
+        ui->txtID->setText(id);
+
+        // 显示状态
+        if (!status.isEmpty()) {
+            int statusIndex = ui->cmbStatus->findText(status);
+            if (statusIndex >= 0) ui->cmbStatus->setCurrentIndex(statusIndex);
+        }
+    }
 }
 
 bool DepartmentEditView::validateInput()
@@ -146,6 +175,11 @@ void DepartmentEditView::clearError()
     ui->lblError->setVisible(false);
 }
 
+QString DepartmentEditView::getCurrentDepartmentId() const
+{
+    return currentDepartmentId;
+}
+
 void DepartmentEditView::on_btnSave_clicked()
 {
     if (!validateInput()) {
@@ -158,6 +192,13 @@ void DepartmentEditView::on_btnSave_clicked()
 
     // 设置状态
     rec.setValue("status", ui->cmbStatus->currentText());
+
+    // 如果ID为空，生成新的ID（针对新增情况）
+    QString id = ui->txtID->text().trimmed();
+    if (id.isEmpty() && isNewDepartment) {
+        id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        rec.setValue("id", id);
+    }
 
     // 更新记录
     tabModel->setRecord(dataMapper->currentIndex(), rec);

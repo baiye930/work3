@@ -16,36 +16,25 @@ public:
     ~appointmentview();
 
 private slots:
-    // 按钮点击槽函数
     void on_btnSearch_clicked();
     void on_btnAdd_clicked();
+    void on_btnDelete_clicked();
     void on_btnEdit_clicked();
-    void on_btnCancel_clicked();
-    void on_btnComplete_clicked();
-    void on_btnConfirm_clicked();
-    void on_btnPrintSchedule_clicked();
-    void on_btnExport_clicked();
-
-    // 其他槽函数
-    void on_txtSearch_returnPressed();
     void on_tableView_doubleClicked(const QModelIndex &index);
-    void on_dateFilter_changed(); // 日期范围改变
-    void on_cmbStatus_currentIndexChanged(int index);
+    void refreshData();
+    void updateCount();
 
 signals:
-    // 信号：跳转到预约编辑界面，参数为行号
     void goAppointmentEditView(int rowNo);
 
 private:
-    // 初始化函数
     void initTableView();
-    void initDateFilters();
-    void populateStatusFilter();
-    void updateStats();
-    void refreshData();
-    void applyFilters();
+    void initButtons();
+    void loadAppointmentData();
+    void setupTableViewHeaders();  // 添加这个声明
 
     Ui::appointmentview *ui;
+    bool isDataLoaded;
 };
 
 #endif // APPOINTMENTVIEW_H

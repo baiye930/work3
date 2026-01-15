@@ -1,201 +1,120 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
-<class>appointmentview</class>
-<widget class="QWidget" name="appointmentview">
- <property name="geometry">
-  <rect>
-   <x>0</x>
-   <y>0</y>
-   <width>1000</width>
-   <height>650</height>
-  </rect>
- </property>
- <property name="windowTitle">
-  <string>预约管理</string>
- </property>
- <layout class="QVBoxLayout" name="verticalLayout">
-  <item>
-   <layout class="QHBoxLayout" name="filterLayout">
-    <item>
-     <widget class="QLabel" name="label">
-      <property name="text">
-       <string>日期范围：</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QDateEdit" name="dateFrom">
-      <property name="calendarPopup">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="label_2">
-      <property name="text">
-       <string>至</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QDateEdit" name="dateTo">
-      <property name="calendarPopup">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="label_3">
-      <property name="text">
-       <string>状态：</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QComboBox" name="cmbStatus">
-     </widget>
-    </item>
-    <item>
-     <widget class="QLineEdit" name="txtSearch">
-      <property name="placeholderText">
-       <string>患者或医生姓名</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="btnSearch">
-      <property name="text">
-       <string>搜索</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </item>
-  <item>
-   <layout class="QHBoxLayout" name="buttonLayout">
-    <item>
-     <widget class="QPushButton" name="btnAdd">
-      <property name="text">
-       <string>新建预约</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="btnEdit">
-      <property name="text">
-       <string>修改</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="btnCancel">
-      <property name="text">
-       <string>取消预约</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="btnComplete">
-      <property name="text">
-       <string>标记完成</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="btnConfirm">
-      <property name="text">
-       <string>确认到诊</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <spacer name="horizontalSpacer">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>40</width>
-        <height>20</height>
-       </size>
-      </property>
-     </spacer>
-    </item>
-    <item>
-     <widget class="QPushButton" name="btnPrintSchedule">
-      <property name="text">
-       <string>打印排班表</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="btnExport">
-      <property name="text">
-       <string>导出</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </item>
-  <item>
-   <widget class="QTableView" name="tableView">
-    <property name="alternatingRowColors">
-     <bool>true</bool>
-    </property>
-    <property name="selectionMode">
-     <enum>QAbstractItemView::SingleSelection</enum>
-    </property>
-    <property name="selectionBehavior">
-     <enum>QAbstractItemView::SelectRows</enum>
-    </property>
-    <property name="sortingEnabled">
-     <bool>true</bool>
-    </property>
-   </widget>
-  </item>
-  <item>
-   <layout class="QHBoxLayout" name="statsLayout">
-    <item>
-     <widget class="QLabel" name="lblCount">
-      <property name="text">
-       <string>总计：0 | 预约中：0 | 已确认：0 | 已完成：0 | 已取消：0 | 未到诊：0</string>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">font-weight: bold;</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <spacer name="horizontalSpacer_2">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>40</width>
-        <height>20</height>
-       </size>
-      </property>
-     </spacer>
-    </item>
-    <item>
-     <widget class="QLabel" name="lblToday">
-      <property name="text">
-       <string>今日预约：0</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="lblTomorrow">
-      <property name="text">
-       <string>明日预约：0</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </item>
- </layout>
-</widget>
-<resources/>
-<connections/>
+ <class>appointmentview</class>
+ <widget class="QWidget" name="appointmentview">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>预约管理</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLineEdit" name="txtSearch">
+       <property name="placeholderText">
+        <string>请输入预约号、患者或医生姓名搜索</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnSearch">
+       <property name="text">
+        <string>搜索</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnAdd">
+       <property name="text">
+        <string>新增</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnDelete">
+       <property name="text">
+        <string>删除</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnEdit">
+       <property name="text">
+        <string>编辑</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTableView" name="tableView">
+     <property name="alternatingRowColors">
+      <bool>true</bool>
+     </property>
+     <property name="selectionMode">
+      <enum>QAbstractItemView::SingleSelection</enum>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectRows</enum>
+     </property>
+     <property name="sortingEnabled">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="lblCount">
+       <property name="text">
+        <string>总计：0 条预约</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnRefresh">
+       <property name="text">
+        <string>刷新</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
 </ui>

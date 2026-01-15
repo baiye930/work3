@@ -132,13 +132,16 @@ bool IDatabase::initDoctorModel()
 
 int IDatabase::addNewDoctor()
 {
-    // 获取当前最大工号
+    // 生成医生ID - 使用UUID
+    QString doctorId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+
+    // 获取当前最大工号（独立于ID）
     QSqlQuery query("SELECT MAX(employee_id) FROM doctor");
-    int nextId = 10001; // 初始值
+    int nextEmployeeId = 10001; // 初始值
     if (query.exec() && query.next()) {
         QString maxId = query.value(0).toString();
         if (!maxId.isEmpty()) {
-            nextId = maxId.toInt() + 1;
+            nextEmployeeId = maxId.toInt() + 1;
         }
     }
 
@@ -148,9 +151,9 @@ int IDatabase::addNewDoctor()
     int curRecNo = curIndex.row();
     QSqlRecord curRec = doctorTabModel->record(curRecNo);
 
-    // 设置默认值
-    curRec.setValue("id", QUuid::createUuid().toString(QUuid::WithoutBraces));
-    curRec.setValue("employee_id", QString::number(nextId));
+    // 设置医生ID和默认值
+    curRec.setValue("id", doctorId);  // 医生唯一ID
+    curRec.setValue("employee_id", QString::number(nextEmployeeId));  // 工号
     curRec.setValue("created_time", QDateTime::currentDateTime());
     curRec.setValue("status", "active");
     curRec.setValue("title", "主治医师"); // 默认职称
@@ -160,7 +163,7 @@ int IDatabase::addNewDoctor()
 
     doctorTabModel->setRecord(curRecNo, curRec);
 
-    qDebug() << "新增医生，ID：" << curRec.value("id").toString() << "，工号：" << curRec.value("employee_id").toString();
+    qDebug() << "新增医生，ID：" << doctorId << "，工号：" << curRec.value("employee_id").toString();
     return curRecNo;
 }
 
@@ -1376,19 +1379,25 @@ int IDatabase::addNewAppointment()
     QSqlRecord curRec = appointmentTabModel->record(curRecNo);
 
     // 设置默认值
-    curRec.setValue("id", QUuid::createUuid().toString(QUuid::WithoutBraces));
+    QString appointmentId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    curRec.setValue("id", appointmentId);
     curRec.setValue("appointment_number", appointmentNumber);
     curRec.setValue("appointment_date", QDate::currentDate());
-    curRec.setValue("appointment_time", QTime::currentTime());
+    curRec.setValue("time_slot", QTime::currentTime().toString("HH:mm"));
     curRec.setValue("created_time", QDateTime::currentDateTime());
+    curRec.setValue("updated_time", QDateTime::currentDateTime());
     curRec.setValue("status", "scheduled");
-    curRec.setValue("check_in_time", QDateTime());
-    curRec.setValue("check_out_time", QDateTime());
+    curRec.setValue("priority", 0);
+    curRec.setValue("reason", "");
+    curRec.setValue("symptoms", "");
+    curRec.setValue("notes", "");
+
+    // patient_id 和 doctor_id 留空，让用户选择
+
+    qDebug() << "新增预约，ID：" << appointmentId
+             << "，预约号：" << appointmentNumber;
 
     appointmentTabModel->setRecord(curRecNo, curRec);
-
-    qDebug() << "新增预约，ID：" << curRec.value("id").toString()
-             << "，预约号：" << curRec.value("appointment_number").toString();
     return curRecNo;
 }
 

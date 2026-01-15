@@ -1,0 +1,28 @@
+{
+  "configurations": [
+    {
+      "name": "windows-gcc-x64",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "D:/qt/6.5.3/mingw_64/include/**",
+        "D:/qt/6.5.3/mingw_64/include",
+        "${env:QTDIR}/include/**",
+        "${env:QTDIR}/include"
+      ],
+      "compilerPath": "D:/qt/Tools/mingw1120_64/bin/g++.exe",
+      "cStandard": "${default}",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "windows-gcc-x64",
+      "compilerArgs": [
+        ""
+      ],
+      "defines": [
+        "QT_CORE_LIB",
+        "QT_GUI_LIB",
+        "QT_WIDGETS_LIB",
+        "QT_SQL_LIB"
+      ]
+    }
+  ],
+  "version": 4
+}

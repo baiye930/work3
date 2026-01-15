@@ -1,0 +1,69 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "qmake",
+            "type": "shell",
+            "command": "D:\\qt\\6.5.3\\mingw_64\\bin\\qmake.exe",
+            "args": [
+                "${workspaceFolder}/work3.pro",
+                "-o",
+                "Makefile"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "D:\\qt\\Tools\\mingw1120_64\\bin\\mingw32-make.exe",
+            "args": [],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "qmake",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "clean",
+            "type": "shell",
+            "command": "D:\\qt\\Tools\\mingw1120_64\\bin\\mingw32-make.exe",
+            "args": [
+                "clean"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "rebuild",
+            "type": "shell",
+            "command": "D:\\qt\\Tools\\mingw1120_64\\bin\\mingw32-make.exe",
+            "args": [
+                "clean"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "clean",
+                "build"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}
